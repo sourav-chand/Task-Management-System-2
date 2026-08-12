@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth-card";
-import { TaskDashboard } from "@/components/task-dashboard";
+import { KanbanBoard } from "@/components/kanban-board";
 import { User, getStoredUser } from "@/lib/api";
 
 export default function Home() {
@@ -26,7 +26,7 @@ export default function Home() {
   }
 
   if (user) {
-    return <TaskDashboard user={user} onLogout={() => setUser(null)} />;
+    return <KanbanBoard user={user} onLogout={() => setUser(null)} />;
   }
 
   return <AuthCard onSuccess={(loggedUser) => setUser(loggedUser)} />;

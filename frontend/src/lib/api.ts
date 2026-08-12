@@ -10,9 +10,11 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  category: string;
+  status: string; // "To Do", "Doing", "Completed", "On Hold"
+  priority?: string;
+  category?: string;
+  assigneeName?: string;
+  tags?: string;
   dueDate?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -20,7 +22,7 @@ export interface Task {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-// Helper for local storage token management
+// Token and User session storage
 export const getStoredToken = () => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('pyramid_token');
@@ -56,7 +58,7 @@ export const setStoredUser = (user: User) => {
   }
 };
 
-// API Methods
+// API Calls
 export async function apiGuestLogin(): Promise<{ user: User; token: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/guest`, {
@@ -69,11 +71,9 @@ export async function apiGuestLogin(): Promise<{ user: User; token: string }> {
     setStoredUser(data.user);
     return data;
   } catch (error) {
-    console.warn('Backend server unavailable, using fallback guest session:', error);
-    // Fallback client guest user if backend server offline
     const fallbackUser: User = {
-      id: `guest-local-${Date.now()}`,
-      name: `Guest User #${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `guest-${Date.now()}`,
+      name: 'Dexter',
       isGuest: true,
       themePreference: 'system',
     };
@@ -99,8 +99,8 @@ export async function apiGoogleLogin(email?: string, name?: string): Promise<{ u
   } catch (error) {
     const fallbackUser: User = {
       id: `google-user-${Date.now()}`,
-      email: email || 'alex.designer@pyramid.app',
-      name: name || 'Alex Developer',
+      email: email || 'dexter@pyramid.app',
+      name: name || 'Dexter',
       isGuest: false,
       themePreference: 'system',
     };
@@ -135,7 +135,6 @@ export async function apiFetchTasks(params?: {
     if (!res.ok) throw new Error('Failed to fetch tasks');
     return await res.json();
   } catch (error) {
-    console.warn('API error, retrieving from local cache:', error);
     return getLocalTasks();
   }
 }
@@ -156,12 +155,14 @@ export async function apiCreateTask(dto: Partial<Task>): Promise<Task> {
   } catch (error) {
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      title: dto.title || 'Untitled Task',
+      title: dto.title || 'New Task',
       description: dto.description || '',
-      status: dto.status || 'TODO',
+      status: dto.status || 'To Do',
       priority: dto.priority || 'MEDIUM',
-      category: dto.category || 'General',
-      dueDate: dto.dueDate,
+      category: dto.category || 'Deployment',
+      assigneeName: dto.assigneeName || 'Admin',
+      tags: dto.tags || 'Deployment,Deployment',
+      dueDate: dto.dueDate || '29 Jul',
       createdAt: new Date().toISOString(),
     };
     saveLocalTask(newTask);
@@ -203,55 +204,47 @@ export async function apiDeleteTask(id: string): Promise<void> {
   }
 }
 
-// Local cache utilities for instant smooth UI
-const INITIAL_DEMO_TASKS: Task[] = [
-  {
-    id: 'demo-1',
-    title: 'Figma Screen 1 - Login & Guest Auth Alignment',
-    description: 'Verified precise layout, rounded-2xl card border, typography, pill buttons, and Google G icon matching Figma specs.',
-    status: 'COMPLETED',
-    priority: 'HIGH',
-    category: 'Design System',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'demo-2',
-    title: 'Dynamic Theme Provider & State Persistence',
-    description: 'Support light, dark, and system color mode preferences with persistence across page refreshes.',
-    status: 'IN_PROGRESS',
-    priority: 'URGENT',
-    category: 'Frontend',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-3',
-    title: 'NestJS REST API Integration with SQLite & Prisma',
-    description: 'Implement JWT auth, user guest creation, and task CRUD endpoints with validation.',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    category: 'Backend',
-    createdAt: new Date().toISOString(),
-  },
+// Initial seed tasks matching Figma Screen 2
+const FIGMA_INITIAL_TASKS: Task[] = [
+  // To Do
+  { id: '1', title: 'Write API Documentation', status: 'To Do', assigneeName: 'Admin', dueDate: '29 Jul', tags: 'Deployment,Deployment', priority: 'HIGH' },
+  { id: '2', title: 'Implement Search Function', status: 'To Do', assigneeName: 'Admin', dueDate: '29 Jul', tags: 'Deployment,Deployment', priority: 'MEDIUM' },
+  { id: '3', title: 'Deploy to Production', status: 'To Do', assigneeName: 'Admin', dueDate: '29 Jul', tags: 'Deployment,Deployment', priority: 'URGENT' },
+  
+  // Doing
+  { id: '4', title: 'Code Review Completed', status: 'Doing', assigneeName: 'Admin', dueDate: '29 Jul', tags: 'Deployment,Deployment', priority: 'HIGH' },
+  { id: '5', title: 'Design Mockups Finalized', status: 'Doing', assigneeName: 'Admin', dueDate: '29 Jul', tags: 'Deployment,Deployment', priority: 'MEDIUM' },
+  
+  // Completed
+  { id: '6', title: 'Feature Testing Passed', status: 'Completed', assigneeName: 'QA Team', dueDate: '30 Jul', tags: 'Testing,Passed', priority: 'LOW' },
+  { id: '7', title: 'UI Design Updated', status: 'Completed', assigneeName: 'Designer', dueDate: '31 Jul', tags: 'Design,Updated', priority: 'MEDIUM' },
+  { id: '8', title: 'Security Audit Scheduled', status: 'Completed', assigneeName: 'Security', dueDate: '01 Aug', tags: 'Audit,Scheduled', priority: 'HIGH' },
+  
+  // On Hold
+  { id: '9', title: 'UI Review', status: 'On Hold', assigneeName: 'Design', dueDate: '02 Aug', tags: 'Review', priority: 'LOW' },
+  { id: '10', title: 'Backend Integration', status: 'On Hold', assigneeName: 'Dev Team', dueDate: '03 Aug', tags: 'Development', priority: 'HIGH' },
+  { id: '11', title: 'User Feedback', status: 'On Hold', assigneeName: 'Product', dueDate: '04 Aug', tags: 'Research', priority: 'MEDIUM' },
+  { id: '12', title: 'Performance Audit', status: 'On Hold', assigneeName: 'Engineering', dueDate: '05 Aug', tags: 'Optimization', priority: 'URGENT' },
 ];
 
 function getLocalTasks(): Task[] {
-  if (typeof window === 'undefined') return INITIAL_DEMO_TASKS;
-  const raw = localStorage.getItem('pyramid_local_tasks');
+  if (typeof window === 'undefined') return FIGMA_INITIAL_TASKS;
+  const raw = localStorage.getItem('pyramid_local_kanban_tasks');
   if (!raw) {
-    localStorage.setItem('pyramid_local_tasks', JSON.stringify(INITIAL_DEMO_TASKS));
-    return INITIAL_DEMO_TASKS;
+    localStorage.setItem('pyramid_local_kanban_tasks', JSON.stringify(FIGMA_INITIAL_TASKS));
+    return FIGMA_INITIAL_TASKS;
   }
   try {
     return JSON.parse(raw);
   } catch {
-    return INITIAL_DEMO_TASKS;
+    return FIGMA_INITIAL_TASKS;
   }
 }
 
 function saveLocalTask(task: Task) {
   const list = getLocalTasks();
-  list.unshift(task);
-  localStorage.setItem('pyramid_local_tasks', JSON.stringify(list));
+  list.push(task);
+  localStorage.setItem('pyramid_local_kanban_tasks', JSON.stringify(list));
 }
 
 function updateLocalTask(id: string, dto: Partial<Task>) {
@@ -259,11 +252,11 @@ function updateLocalTask(id: string, dto: Partial<Task>) {
   const index = list.findIndex(t => t.id === id);
   if (index !== -1) {
     list[index] = { ...list[index], ...dto };
-    localStorage.setItem('pyramid_local_tasks', JSON.stringify(list));
+    localStorage.setItem('pyramid_local_kanban_tasks', JSON.stringify(list));
   }
 }
 
 function deleteLocalTask(id: string) {
   const list = getLocalTasks().filter(t => t.id !== id);
-  localStorage.setItem('pyramid_local_tasks', JSON.stringify(list));
+  localStorage.setItem('pyramid_local_kanban_tasks', JSON.stringify(list));
 }

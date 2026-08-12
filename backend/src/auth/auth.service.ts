@@ -1,27 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
+    private tasksService: TasksService,
     private jwtService: JwtService,
   ) {}
 
   async continueAsGuest() {
-    // Create a new guest user or reuse guest account
-    const guestUser = await this.prisma.user.create({
-      data: {
-        name: `Guest User #${Math.floor(1000 + Math.random() * 9000)}`,
-        isGuest: true,
-        email: `guest_${Date.now()}@pyramid.app`,
-        themePreference: 'system',
-      },
+    let guestUser = await this.prisma.user.findFirst({
+      where: { isGuest: true },
     });
 
-    // Create seed demo tasks for the new guest user
-    await this.seedDemoTasksForUser(guestUser.id);
+    if (!guestUser) {
+      guestUser = await this.prisma.user.create({
+        data: {
+          name: 'Dexter',
+          isGuest: true,
+          email: `dexter_guest@pyramid.app`,
+          themePreference: 'system',
+        },
+      });
+    }
+
+    await this.tasksService.seedFigmaDemoTasks(guestUser.id);
 
     const token = this.jwtService.sign({
       sub: guestUser.id,
@@ -37,8 +43,8 @@ export class AuthService {
   }
 
   async loginWithGoogle(email?: string, name?: string) {
-    const userEmail = email || 'user@example.com';
-    const userName = name || 'Google User';
+    const userEmail = email || 'dexter@pyramid.app';
+    const userName = name || 'Dexter';
 
     let user = await this.prisma.user.findUnique({
       where: { email: userEmail },
@@ -53,9 +59,9 @@ export class AuthService {
           themePreference: 'system',
         },
       });
-
-      await this.seedDemoTasksForUser(user.id);
     }
+
+    await this.tasksService.seedFigmaDemoTasks(user.id);
 
     const token = this.jwtService.sign({
       sub: user.id,
@@ -81,37 +87,6 @@ export class AuthService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { themePreference: theme },
-    });
-  }
-
-  private async seedDemoTasksForUser(userId: string) {
-    await this.prisma.task.createMany({
-      data: [
-        {
-          title: 'Design System Alignment & Figma Audit',
-          description: 'Ensure layout accuracy, typography, spacing, and buttons match Figma specs.',
-          status: 'COMPLETED',
-          priority: 'HIGH',
-          category: 'Design',
-          userId,
-        },
-        {
-          title: 'Implement Dynamic Theme Persist (Light / Dark)',
-          description: 'Persist theme selection across refreshes using localStorage & NextJS Theme provider.',
-          status: 'IN_PROGRESS',
-          priority: 'URGENT',
-          category: 'Frontend',
-          userId,
-        },
-        {
-          title: 'Connect Guest Auth to NestJS API endpoints',
-          description: 'Enable full stack task CRUD operations and real-time backend persistence.',
-          status: 'TODO',
-          priority: 'MEDIUM',
-          category: 'Backend',
-          userId,
-        },
-      ],
     });
   }
 }

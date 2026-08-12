@@ -1,4 +1,4 @@
-// This is your Prisma schema file
+// Prisma schema file for Pyramid Task Management System
 
 generator client {
   provider = "prisma-client-js"
@@ -21,15 +21,17 @@ model User {
 }
 
 model Task {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  status      String   @default("TODO") // TODO, IN_PROGRESS, COMPLETED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  category    String   @default("General")
-  dueDate     DateTime?
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  status       String   @default("To Do") // "To Do", "Doing", "Completed", "On Hold"
+  priority     String   @default("MEDIUM")
+  category     String   @default("Deployment")
+  assigneeName String   @default("Admin")
+  tags         String   @default("Deployment,Deployment")
+  dueDate      String   @default("29 Jul")
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

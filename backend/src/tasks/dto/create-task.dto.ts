@@ -11,7 +11,7 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
-  status?: string;
+  status?: string; // "To Do", "Doing", "Completed", "On Hold"
 
   @IsString()
   @IsOptional()
@@ -20,6 +20,14 @@ export class CreateTaskDto {
   @IsString()
   @IsOptional()
   category?: string;
+
+  @IsString()
+  @IsOptional()
+  assigneeName?: string;
+
+  @IsString()
+  @IsOptional()
+  tags?: string;
 
   @IsString()
   @IsOptional()
