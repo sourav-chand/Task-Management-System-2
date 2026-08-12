@@ -1,0 +1,18 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Builds
+.next
+**/dist
+**/build
+*.tsbuildinfo
+
+# Database
+*.db-journal
+
+# Logs & Environment
+*.log
+.env
+.env.local
+.DS_Store
