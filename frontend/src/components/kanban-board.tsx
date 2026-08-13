@@ -43,7 +43,6 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   // View Mode
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
@@ -324,34 +323,25 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
           {/* Right: toolbar */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
 
-            {/* Search — expands inline */}
-            {isSearchVisible ? (
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  placeholder="Search tasks..."
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-7 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none w-36 sm:w-48 transition-all"
-                />
-                <Search className="w-3.5 h-3.5 absolute left-2.5 text-neutral-400" />
+            {/* Search — always visible */}
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-7 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none w-32 sm:w-48 transition-all focus:ring-1 focus:ring-neutral-900 dark:focus:ring-neutral-100"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 text-neutral-400" />
+              {searchQuery && (
                 <button
-                  onClick={() => { setIsSearchVisible(false); setSearchQuery(""); }}
-                  className="absolute right-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsSearchVisible(true)}
-                className="p-2 border border-neutral-200/90 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-600 dark:text-neutral-400 transition-colors cursor-pointer shadow-2xs"
-                title="Search"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            )}
+              )}
+            </div>
 
             {/* Fields button + popover */}
             <div className="relative" ref={fieldsRef}>
