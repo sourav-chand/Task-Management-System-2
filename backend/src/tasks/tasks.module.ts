@@ -7,5 +7,6 @@ import { AuthModule } from '../auth/auth.module';
   imports: [forwardRef(() => AuthModule)],
   controllers: [TasksController],
   providers: [TasksService],
+  exports: [TasksService],
 })
 export class TasksModule {}

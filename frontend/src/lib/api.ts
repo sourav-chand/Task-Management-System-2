@@ -135,7 +135,18 @@ export async function apiFetchTasks(params?: {
     if (!res.ok) throw new Error('Failed to fetch tasks');
     return await res.json();
   } catch (error) {
-    return getLocalTasks();
+    let local = getLocalTasks();
+    if (params?.status && params.status !== 'ALL') {
+      local = local.filter(t => t.status === params.status);
+    }
+    if (params?.priority && params.priority !== 'ALL') {
+      local = local.filter(t => (t.priority || 'MEDIUM') === params.priority);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      local = local.filter(t => t.title.toLowerCase().includes(q));
+    }
+    return local;
   }
 }
 

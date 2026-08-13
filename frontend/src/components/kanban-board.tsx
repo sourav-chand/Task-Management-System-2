@@ -45,7 +45,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   // View Mode
-  const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  const [viewMode, setViewMode] = useState<"board" | "list">("list");
 
   // Fields Popover
   const [isFieldsOpen, setIsFieldsOpen] = useState(false);
@@ -118,7 +118,6 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
       const data = await apiFetchTasks({
         status: selectedFilterStatus,
         priority: selectedFilterPriority,
-        search: searchQuery,
       });
       setTasks(data);
     } catch (err) {
@@ -130,7 +129,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
 
   useEffect(() => {
     loadTasks();
-  }, [searchQuery, selectedFilterStatus, selectedFilterPriority]);
+  }, [selectedFilterStatus, selectedFilterPriority]);
 
   const handleToggleField = (fieldKey: keyof typeof visibleFields) => {
     setVisibleFields((prev) => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
@@ -203,6 +202,12 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     if (
       selectedFilterAssignee !== "ALL" &&
       (t.assigneeName || "Admin") !== selectedFilterAssignee
+    ) {
+      return false;
+    }
+    if (
+      searchQuery.trim() &&
+      !t.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
     ) {
       return false;
     }
@@ -514,6 +519,9 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                   (t) => (t.status || "To Do").toLowerCase() === columnName.toLowerCase()
                 );
 
+                // During search, hide columns with no matches
+                if (searchQuery.trim() && columnTasks.length === 0) return null;
+
                 return (
                   <div
                     key={columnName}
@@ -554,12 +562,28 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                           >
                             {/* Row 1: Title + context menu */}
                             <div className="flex items-start justify-between gap-2 mb-3">
-                              <h3
-                                onClick={() => handleOpenEditModal(task)}
-                                className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              >
-                                {task.title}
-                              </h3>
+                              <div className="flex flex-col gap-1.5 min-w-0">
+                                <h3
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                >
+                                  {task.title}
+                                </h3>
+                                {visibleFields.priority && (() => {
+                                  const p = (task.priority || "MEDIUM").toUpperCase();
+                                  const priorityStyles: Record<string, string> = {
+                                    LOW:    "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400",
+                                    MEDIUM: "bg-orange-50 dark:bg-orange-950/40 text-orange-500",
+                                    HIGH:   "bg-orange-50 dark:bg-orange-950/40 text-orange-500",
+                                    URGENT: "bg-red-50 dark:bg-red-950/40 text-red-500",
+                                  };
+                                  return (
+                                    <span className={`self-start text-[10px] font-bold px-1.5 py-0.5 rounded-md ${priorityStyles[p] ?? priorityStyles.MEDIUM}`}>
+                                      {p.charAt(0) + p.slice(1).toLowerCase()}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               <div className="relative shrink-0">
                                 <button
                                   onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
@@ -600,7 +624,9 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             </div>
 
                             {/* Row 2: Avatar + assignee name + red date pill */}
+                            {(visibleFields.members || visibleFields.dueDate) && (
                             <div className="flex items-center justify-between gap-2 mb-3">
+                              {visibleFields.members && (
                               <div className="flex items-center gap-2 min-w-0">
                                 {/* Gradient avatar */}
                                 <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-[2px] shrink-0">
@@ -612,15 +638,19 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                                   {task.assigneeName || "Admin"}
                                 </span>
                               </div>
+                              )}
                               {/* Red date pill */}
+                              {visibleFields.dueDate && (
                               <div className="flex items-center gap-1 bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-400 text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0">
                                 <Calendar className="w-3 h-3" />
                                 <span>{task.dueDate || "29 Jul"}</span>
                               </div>
+                              )}
                             </div>
+                            )}
 
                             {/* Row 3: Tags */}
-                            {tags.length > 0 && (
+                            {visibleFields.labels && tags.length > 0 && (
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {tags.map((tag, idx) => (
                                   <span
@@ -653,10 +683,18 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
           ) : (
             /* LIST VIEW — table layout matching Figma design */
             <div className="p-3 sm:p-6 space-y-5">
-              {COLUMNS.map((columnName) => {
+              {searchQuery.trim() && filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-neutral-400 dark:text-neutral-600">
+                  <Search className="w-8 h-8 opacity-40" />
+                  <p className="text-sm font-medium">No tasks match &ldquo;{searchQuery}&rdquo;</p>
+                </div>
+              ) : COLUMNS.map((columnName) => {
                 const groupTasks = filteredTasks.filter(
                   (t) => (t.status || "To Do").toLowerCase() === columnName.toLowerCase()
                 );
+
+                // During search, hide sections with no matches
+                if (searchQuery.trim() && groupTasks.length === 0) return null;
 
                 return (
                   <div key={columnName}>
@@ -671,11 +709,14 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     {/* Table */}
                     <div className="w-full border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-[#121215]">
                       {/* Table header */}
-                      <div className="grid grid-cols-[1fr_140px_120px_160px_80px] bg-neutral-50 dark:bg-[#18181B] border-b border-neutral-200 dark:border-neutral-800">
+                      <div
+                        className="bg-neutral-50 dark:bg-[#18181B] border-b border-neutral-200 dark:border-neutral-800"
+                        style={{ display: "grid", gridTemplateColumns: `1fr${visibleFields.priority ? " 140px" : ""}${visibleFields.members ? " 120px" : ""}${visibleFields.dueDate ? " 160px" : ""} 80px` }}
+                      >
                         <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Task</div>
-                        <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Priority</div>
-                        <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Members</div>
-                        <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Due Date</div>
+                        {visibleFields.priority && <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Priority</div>}
+                        {visibleFields.members && <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Members</div>}
+                        {visibleFields.dueDate && <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Due Date</div>}
                         <div className="px-4 py-2.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Actions</div>
                       </div>
 
@@ -699,7 +740,8 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                           return (
                             <div
                               key={task.id}
-                              className="grid grid-cols-[1fr_140px_120px_160px_80px] border-b border-neutral-100 dark:border-neutral-800/60 last:border-b-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors group"
+                              className="border-b border-neutral-100 dark:border-neutral-800/60 last:border-b-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors group"
+                              style={{ display: "grid", gridTemplateColumns: `1fr${visibleFields.priority ? " 140px" : ""}${visibleFields.members ? " 120px" : ""}${visibleFields.dueDate ? " 160px" : ""} 80px` }}
                             >
                               {/* Task name */}
                               <div className="px-4 py-3 flex items-center min-w-0">
@@ -712,8 +754,8 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                               </div>
 
                               {/* Priority — bar icon + colored label */}
+                              {visibleFields.priority && (
                               <div className="px-4 py-3 flex items-center gap-2">
-                                {/* Bar chart icon: 3 bars of varying height */}
                                 <svg
                                   width="14" height="14" viewBox="0 0 14 14"
                                   className={`shrink-0 ${pc.color}`}
@@ -726,8 +768,10 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                                 </svg>
                                 <span className={`text-sm font-medium ${pc.color}`}>{label}</span>
                               </div>
+                              )}
 
                               {/* Members — avatar */}
+                              {visibleFields.members && (
                               <div className="px-4 py-3 flex items-center">
                                 <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-[2px] shrink-0">
                                   <div className="w-full h-full rounded-full bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-white">
@@ -735,13 +779,16 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                                   </div>
                                 </div>
                               </div>
+                              )}
 
                               {/* Due Date */}
+                              {visibleFields.dueDate && (
                               <div className="px-4 py-3 flex items-center">
                                 <span className="text-sm text-neutral-600 dark:text-neutral-400">
                                   {task.dueDate || "—"}
                                 </span>
                               </div>
+                              )}
 
                               {/* Actions */}
                               <div className="px-4 py-3 flex items-center relative">
