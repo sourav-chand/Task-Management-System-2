@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./theme-toggle";
 import {
   User,
@@ -39,6 +40,7 @@ interface KanbanBoardProps {
 const COLUMNS = ["To Do", "Doing", "Completed", "On Hold"];
 
 export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -564,7 +566,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             <div className="flex items-start justify-between gap-2 mb-3">
                               <div className="flex flex-col gap-1.5 min-w-0">
                                 <h3
-                                  onClick={() => handleOpenEditModal(task)}
+                                  onClick={() => router.push(`/tasks/${task.id}`)}
                                   className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                 >
                                   {task.title}
@@ -746,7 +748,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                               {/* Task name */}
                               <div className="px-4 py-3 flex items-center min-w-0">
                                 <span
-                                  onClick={() => handleOpenEditModal(task)}
+                                  onClick={() => router.push(`/tasks/${task.id}`)}
                                   className="text-sm text-neutral-900 dark:text-neutral-100 font-medium truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                   {task.title}

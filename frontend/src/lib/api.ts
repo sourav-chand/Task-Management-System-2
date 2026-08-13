@@ -150,6 +150,20 @@ export async function apiFetchTasks(params?: {
   }
 }
 
+export async function apiGetTaskById(id: string): Promise<Task | null> {
+  const token = getStoredToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Not found');
+    return await res.json();
+  } catch {
+    return getLocalTasks().find(t => t.id === id) ?? null;
+  }
+}
+
 export async function apiCreateTask(dto: Partial<Task>): Promise<Task> {
   const token = getStoredToken();
   try {
