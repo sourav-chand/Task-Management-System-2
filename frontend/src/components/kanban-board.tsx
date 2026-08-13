@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ThemeToggle } from "./theme-toggle";
+import { useTheme } from "next-themes";
 import {
   User,
   Task,
@@ -30,6 +31,10 @@ import {
   LogOut,
   X,
   Check,
+  Sun,
+  Moon,
+  Settings,
+  ChevronRight,
 } from "lucide-react";
 
 interface KanbanBoardProps {
@@ -71,6 +76,9 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   const [activeColumnForNew, setActiveColumnForNew] = useState("To Do");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [menuTask, setMenuTask] = useState<Task | null>(null);
+  const [menuColumn, setMenuColumn] = useState<string>("");
 
   // Form
   const [formData, setFormData] = useState({
@@ -85,6 +93,30 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   // Refs
   const fieldsRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  const workspacePopoverRef = useRef<HTMLDivElement>(null);
+
+  // Workspace Popover
+  const [workspacePopoverOpen, setWorkspacePopoverOpen] = useState(false);
+  const [colorModeOpen, setColorModeOpen] = useState(false);
+  const [changeThemeOpen, setChangeThemeOpen] = useState(false);
+  const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const { theme, setTheme } = useTheme();
+
+  // Accent color
+  const ACCENT_COLORS = [
+    { name: "Amber", bg: "bg-amber-500", text: "text-amber-500" },
+    { name: "Blue", bg: "bg-blue-500", text: "text-blue-500" },
+    { name: "Pink", bg: "bg-pink-500", text: "text-pink-500" },
+    { name: "Rose", bg: "bg-rose-500", text: "text-rose-500" },
+    { name: "Emerald", bg: "bg-emerald-500", text: "text-emerald-500" },
+    { name: "Black", bg: "bg-neutral-900 dark:bg-neutral-100", text: "text-neutral-900 dark:text-neutral-100" },
+  ];
+  const [accentColor, setAccentColor] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pyramid_accent_color") || "Blue";
+    }
+    return "Blue";
+  });
 
   // Close popovers on outside click; close sidebar overlay on mobile
   useEffect(() => {
@@ -94,6 +126,11 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
       }
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
         setIsFilterOpen(false);
+      }
+      if (workspacePopoverRef.current && !workspacePopoverRef.current.contains(event.target as Node)) {
+        setWorkspacePopoverOpen(false);
+        setColorModeOpen(false);
+        setChangeThemeOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -221,12 +258,17 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     selectedFilterPriority !== "ALL" ||
     selectedFilterAssignee !== "ALL";
 
+  const positionSubmenu = (e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setSubmenuPos({ top: rect.top, left: rect.right + 4 });
+  };
+
   // ─── Sidebar content (shared between overlay and desktop) ───────────────────
   const SidebarContent = () => (
     <>
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 flex-1 overflow-y-auto overflow-x-hidden">
         {/* User Profile */}
-        <div className="space-y-1">
+        <div className="space-y-1 relative" ref={workspacePopoverRef}>
           <div className="flex items-center justify-between p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-0.5 shrink-0 shadow-xs">
@@ -243,8 +285,157 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                 </span>
               </div>
             </div>
-            <ChevronsUpDown className="w-4 h-4 text-neutral-400 shrink-0" />
+            <button
+              onClick={(e) => { e.stopPropagation(); setWorkspacePopoverOpen(!workspacePopoverOpen); }}
+              className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shrink-0"
+            >
+              <ChevronsUpDown className="w-4 h-4 text-neutral-400" />
+            </button>
           </div>
+
+          {/* Workspace Popover */}
+          {workspacePopoverOpen && (
+            <div className="absolute left-0 top-full mt-1 w-54 bg-white dark:bg-[#1C1C1F] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              {/* User Profile Card */}
+              <div className="px-4 pt-4 pb-3 text-center border-b border-neutral-100 dark:border-neutral-800">
+                <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-0.5 shadow-sm mb-2">
+                  <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-white text-sm font-bold">
+                    {(user.name || "D")[0].toUpperCase()}
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">{user.name || "Dexter"}</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">{user.email || "dexter@pyramid.app"}</p>
+              </div>
+
+              {/* Menu Items */}
+              <div className="py-1.5">
+                {/* Change Theme */}
+                <div className="relative">
+                  <button
+                    onMouseEnter={(e) => { positionSubmenu(e); setChangeThemeOpen(true); setColorModeOpen(false); }}
+                    onClick={(e) => { positionSubmenu(e); setChangeThemeOpen(!changeThemeOpen); setColorModeOpen(false); }}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Sun className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                      Change Theme
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
+                  </button>
+                </div>
+
+                {/* Color Mode */}
+                <div className="relative">
+                  <button
+                    onMouseEnter={(e) => { positionSubmenu(e); setColorModeOpen(true); setChangeThemeOpen(false); }}
+                    onClick={(e) => { positionSubmenu(e); setColorModeOpen(!colorModeOpen); setChangeThemeOpen(false); }}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className={`w-4 h-4 rounded ${ACCENT_COLORS.find(c => c.name === accentColor)?.bg || "bg-blue-500"} shrink-0`} />
+                      Color Mode
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
+                  </button>
+                </div>
+
+                {/* Settings */}
+                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
+                  <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                  Settings
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Change Theme Submenu - fixed positioned */}
+          {workspacePopoverOpen && changeThemeOpen && (
+            <div
+              onMouseLeave={() => setChangeThemeOpen(false)}
+              className="fixed w-44 bg-white dark:bg-[#1C1C1F] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl z-[70] py-1.5 animate-in fade-in zoom-in-95 duration-100"
+              style={{ top: submenuPos.top, left: submenuPos.left }}
+            >
+              <p className="px-3.5 pt-1.5 pb-1 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Theme</p>
+              <button
+                onClick={() => { setTheme("light"); setChangeThemeOpen(false); setWorkspacePopoverOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors cursor-pointer ${
+                  theme === "light"
+                    ? "text-neutral-900 dark:text-white font-semibold"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Sun className="w-3.5 h-3.5" />
+                  Light
+                </span>
+                {theme === "light" && <Check className="w-4 h-4 text-neutral-900 dark:text-white" />}
+              </button>
+              <button
+                onClick={() => { setTheme("dark"); setChangeThemeOpen(false); setWorkspacePopoverOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors cursor-pointer ${
+                  theme === "dark"
+                    ? "text-neutral-900 dark:text-white font-semibold"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Moon className="w-3.5 h-3.5" />
+                  Dark
+                </span>
+                {theme === "dark" && <Check className="w-4 h-4 text-neutral-900 dark:text-white" />}
+              </button>
+              <button
+                onClick={() => { setTheme("system"); setChangeThemeOpen(false); setWorkspacePopoverOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors cursor-pointer ${
+                  theme === "system"
+                    ? "text-neutral-900 dark:text-white font-semibold"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <path d="M8 21h8" />
+                    <path d="M12 17v4" />
+                  </svg>
+                  System
+                </span>
+                {theme === "system" && <Check className="w-4 h-4 text-neutral-900 dark:text-white" />}
+              </button>
+            </div>
+          )}
+
+          {/* Color Mode Submenu - fixed positioned */}
+          {workspacePopoverOpen && colorModeOpen && (
+            <div
+              onMouseLeave={() => setColorModeOpen(false)}
+              className="fixed w-48 bg-white dark:bg-[#1C1C1F] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl z-[70] py-1.5 animate-in fade-in zoom-in-95 duration-100"
+              style={{ top: submenuPos.top, left: submenuPos.left }}
+            >
+              <p className="px-3.5 pt-1.5 pb-1 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Color Mode</p>
+              {ACCENT_COLORS.map((color) => (
+                <button
+                  key={color.name}
+                  onClick={() => {
+                    setAccentColor(color.name);
+                    localStorage.setItem("pyramid_accent_color", color.name);
+                    setColorModeOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors cursor-pointer ${
+                    accentColor === color.name
+                      ? "text-neutral-900 dark:text-white font-semibold"
+                      : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className={`w-3.5 h-3.5 rounded-sm ${color.bg} shrink-0`} />
+                    {color.name}
+                  </span>
+                  {accentColor === color.name && <Check className="w-4 h-4 text-neutral-900 dark:text-white" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -267,8 +458,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between shrink-0">
-        <ThemeToggle />
+      {/* <div className="p-4 border-t border-neutral-200/80 dark:border-neutral-800 flex items-center justify-end shrink-0">
         <button
           onClick={handleLogoutClick}
           title="Log Out"
@@ -276,7 +466,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
         >
           <LogOut className="w-4 h-4" />
         </button>
-      </div>
+      </div> */}
     </>
   );
 
@@ -588,40 +778,22 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                               </div>
                               <div className="relative shrink-0">
                                 <button
-                                  onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
+                                  onClick={(e) => {
+                                    if (activeMenuTaskId === task.id) {
+                                      setActiveMenuTaskId(null);
+                                      setMenuPos(null);
+                                    } else {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setMenuPos({ x: rect.right - 176, y: rect.bottom + 4 });
+                                      setActiveMenuTaskId(task.id);
+                                      setMenuTask(task);
+                                      setMenuColumn(columnName);
+                                    }
+                                  }}
                                   className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors cursor-pointer"
                                 >
                                   <MoreHorizontal className="w-4 h-4" />
                                 </button>
-                                {activeMenuTaskId === task.id && (
-                                  <div className="absolute right-0 top-7 w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg p-1.5 z-30 space-y-1 text-xs">
-                                    <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                                      Move to
-                                    </div>
-                                    {COLUMNS.filter((c) => c !== columnName).map((targetCol) => (
-                                      <button
-                                        key={targetCol}
-                                        onClick={() => handleMoveTask(task, targetCol)}
-                                        className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
-                                      >
-                                        {targetCol}
-                                      </button>
-                                    ))}
-                                    <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
-                                    <button
-                                      onClick={() => handleOpenEditModal(task)}
-                                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
-                                    >
-                                      Edit Task
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTask(task.id)}
-                                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-medium transition-colors"
-                                    >
-                                      Delete Task
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                             </div>
 
@@ -795,41 +967,22 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                               {/* Actions */}
                               <div className="px-4 py-3 flex items-center relative">
                                 <button
-                                  onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
+                                  onClick={(e) => {
+                                    if (activeMenuTaskId === task.id) {
+                                      setActiveMenuTaskId(null);
+                                      setMenuPos(null);
+                                    } else {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setMenuPos({ x: rect.right - 176, y: rect.bottom + 4 });
+                                      setActiveMenuTaskId(task.id);
+                                      setMenuTask(task);
+                                      setMenuColumn(columnName);
+                                    }
+                                  }}
                                   className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                                 >
                                   <MoreHorizontal className="w-4 h-4" />
                                 </button>
-
-                                {activeMenuTaskId === task.id && (
-                                  <div className="absolute right-2 top-10 w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg p-1.5 z-30 space-y-1 text-xs">
-                                    <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                                      Move Column
-                                    </div>
-                                    {COLUMNS.filter((c) => c !== columnName).map((targetCol) => (
-                                      <button
-                                        key={targetCol}
-                                        onClick={() => handleMoveTask(task, targetCol)}
-                                        className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
-                                      >
-                                        Move to {targetCol}
-                                      </button>
-                                    ))}
-                                    <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
-                                    <button
-                                      onClick={() => handleOpenEditModal(task)}
-                                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
-                                    >
-                                      Edit Task
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTask(task.id)}
-                                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-medium transition-colors"
-                                    >
-                                      Delete Task
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           );
@@ -956,6 +1109,59 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── Context menu (portal) ─────────────────────────────────────────── */}
+      {activeMenuTaskId && menuPos && menuTask && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[99]"
+            onClick={() => { setActiveMenuTaskId(null); setMenuPos(null); }}
+          />
+          <div
+            className="fixed w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl p-1.5 z-[100] space-y-1 text-xs"
+            style={{ left: menuPos.x, top: menuPos.y }}
+          >
+            <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+              Move to
+            </div>
+            {COLUMNS.filter((c) => c !== menuColumn).map((targetCol) => (
+              <button
+                key={targetCol}
+                onClick={() => {
+                  handleMoveTask(menuTask, targetCol);
+                  setActiveMenuTaskId(null);
+                  setMenuPos(null);
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
+              >
+                {targetCol}
+              </button>
+            ))}
+            <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
+            <button
+              onClick={() => {
+                handleOpenEditModal(menuTask);
+                setActiveMenuTaskId(null);
+                setMenuPos(null);
+              }}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
+            >
+              Edit Task
+            </button>
+            <button
+              onClick={() => {
+                handleDeleteTask(menuTask.id);
+                setActiveMenuTaskId(null);
+                setMenuPos(null);
+              }}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-medium transition-colors"
+            >
+              Delete Task
+            </button>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
