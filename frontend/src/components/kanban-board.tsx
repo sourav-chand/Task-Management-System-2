@@ -554,103 +554,104 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     </div>
 
                     {/* Task cards */}
-                    <div className="space-y-2.5 sm:space-y-3">
-                      {columnTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="relative bg-white dark:bg-[#1C1C20] border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-3 sm:p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-md transition-all space-y-2.5 sm:space-y-3 group"
-                        >
-                          {/* Title row */}
-                          <div className="flex items-start justify-between gap-2">
-                            <h3
-                              onClick={() => handleOpenEditModal(task)}
-                              className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight leading-snug hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                            >
-                              {task.title}
-                            </h3>
-                            <div className="relative shrink-0">
-                              <button
-                                onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
-                                className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                    <div className="space-y-2.5">
+                      {columnTasks.map((task) => {
+                        const tags = (task.tags || "").split(",").map(t => t.trim()).filter(Boolean);
+                        return (
+                          <div
+                            key={task.id}
+                            className="relative bg-white dark:bg-[#1C1C20] border border-neutral-200 dark:border-neutral-800 rounded-xl p-3.5 hover:shadow-sm transition-all group"
+                          >
+                            {/* Row 1: Title + context menu */}
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <h3
+                                onClick={() => handleOpenEditModal(task)}
+                                className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                               >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
-
-                              {activeMenuTaskId === task.id && (
-                                <div className="absolute right-0 top-7 w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg p-1.5 z-30 space-y-1 text-xs">
-                                  <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Move Column</div>
-                                  {COLUMNS.filter((c) => c !== columnName).map((targetCol) => (
+                                {task.title}
+                              </h3>
+                              <div className="relative shrink-0">
+                                <button
+                                  onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
+                                  className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors cursor-pointer"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                                {activeMenuTaskId === task.id && (
+                                  <div className="absolute right-0 top-7 w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg p-1.5 z-30 space-y-1 text-xs">
+                                    <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                                      Move to
+                                    </div>
+                                    {COLUMNS.filter((c) => c !== columnName).map((targetCol) => (
+                                      <button
+                                        key={targetCol}
+                                        onClick={() => handleMoveTask(task, targetCol)}
+                                        className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
+                                      >
+                                        {targetCol}
+                                      </button>
+                                    ))}
+                                    <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
                                     <button
-                                      key={targetCol}
-                                      onClick={() => handleMoveTask(task, targetCol)}
+                                      onClick={() => handleOpenEditModal(task)}
                                       className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium transition-colors"
                                     >
-                                      Move to {targetCol}
+                                      Edit Task
                                     </button>
-                                  ))}
-                                  <div className="h-px bg-neutral-200 dark:bg-neutral-700 my-1" />
-                                  <button
-                                    onClick={() => handleDeleteTask(task.id)}
-                                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-medium transition-colors"
-                                  >
-                                    Delete Task
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {visibleFields.members && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                                {(task.assigneeName || "A")[0]}
+                                    <button
+                                      onClick={() => handleDeleteTask(task.id)}
+                                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-medium transition-colors"
+                                    >
+                                      Delete Task
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                                {task.assigneeName || "Admin"}
-                              </span>
                             </div>
-                          )}
 
-                          {visibleFields.priority && (
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 inline-block">
-                              {task.priority || "MEDIUM"}
-                            </span>
-                          )}
-
-                          {visibleFields.dueDate && (
-                            <div className="bg-[#FFF0F0] dark:bg-red-950/60 text-[#FF4D4D] dark:text-red-300 font-bold text-[11px] px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{task.dueDate || "29 Jul"}</span>
-                            </div>
-                          )}
-
-                          {visibleFields.labels && (
-                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                              {(task.tags || "Deployment,Deployment").split(",").map((tag, idx) => (
-                                <span key={idx} className="border border-neutral-200/90 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 font-medium text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Tag className="w-2.5 h-2.5 text-neutral-400" />
-                                  {tag.trim()}
+                            {/* Row 2: Avatar + assignee name + red date pill */}
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {/* Gradient avatar */}
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-[2px] shrink-0">
+                                  <div className="w-full h-full rounded-full bg-neutral-800 dark:bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-white">
+                                    {(task.assigneeName || "A")[0].toUpperCase()}
+                                  </div>
+                                </div>
+                                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 truncate">
+                                  {task.assigneeName || "Admin"}
                                 </span>
-                              ))}
+                              </div>
+                              {/* Red date pill */}
+                              <div className="flex items-center gap-1 bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-400 text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0">
+                                <Calendar className="w-3 h-3" />
+                                <span>{task.dueDate || "29 Jul"}</span>
+                              </div>
                             </div>
-                          )}
 
-                          {visibleFields.status && (
-                            <div className="text-[11px] font-semibold text-neutral-500">
-                              Status: <span className="text-neutral-900 dark:text-white font-bold">{task.status}</span>
-                            </div>
-                          )}
-
-                          {visibleFields.reporter && (
-                            <div className="text-[11px] font-medium text-neutral-400">Reporter: Dexter</div>
-                          )}
-                        </div>
-                      ))}
+                            {/* Row 3: Tags */}
+                            {tags.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {tags.map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="flex items-center gap-1 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-md px-2 py-0.5"
+                                  >
+                                    <Tag className="w-2.5 h-2.5 shrink-0" />
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
+                    {/* Add Task footer */}
                     <button
                       onClick={() => handleOpenAddModal(columnName)}
-                      className="flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white p-2 rounded-xl hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer w-full mt-1"
+                      className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white px-1 py-2 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer w-full mt-1"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Add Task</span>
