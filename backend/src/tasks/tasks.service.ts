@@ -23,10 +23,10 @@ export class TasksService {
       where.AND = [
         {
           OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-            { tags: { contains: search, mode: 'insensitive' } },
-            { assigneeName: { contains: search, mode: 'insensitive' } },
+            { title: { contains: search } },
+            { description: { contains: search } },
+            { tags: { contains: search } },
+            { assigneeName: { contains: search } },
           ],
         },
       ];
