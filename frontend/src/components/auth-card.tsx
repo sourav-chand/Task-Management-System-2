@@ -39,34 +39,34 @@ export function AuthCard({ onSuccess }: AuthCardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] flex flex-col items-center justify-center p-4 relative transition-colors duration-200 font-sans">
-      {/* Theme Switcher in Top Right */}
-      <div className="absolute top-5 right-5 z-10">
+    <div className="min-h-screen w-full bg-[#FAFAFA] dark:bg-[#09090B] flex flex-col items-center justify-center px-4 py-8 relative transition-colors duration-200 font-sans">
+      {/* Theme Switcher — top right */}
+      <div className="absolute top-4 right-4 sm:top-5 sm:right-5 z-10">
         <ThemeToggle />
       </div>
 
-      {/* Main Content Container */}
+      {/* Main Content */}
       <div className="w-full max-w-[440px] flex flex-col items-center">
-        {/* Pyramid Logo Header above the Card */}
+        {/* Logo */}
         <div className="mb-6">
           <Logo />
         </div>
 
-        {/* Figma Design Card Container */}
-        <div className="w-full bg-white dark:bg-[#121215] border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-7 sm:p-9 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] transition-all">
-          {/* Card Title */}
-          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight text-center">
+        {/* Card */}
+        <div className="w-full bg-white dark:bg-[#121215] border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-6 sm:p-9 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] transition-all">
+          {/* Title */}
+          <h1 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight text-center">
             Let's get back on track
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center mt-1.5 mb-7 leading-normal">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center mt-1.5 mb-6 sm:mb-7 leading-normal">
             Enter your email below to login to your account.
           </p>
 
-          {/* Action Buttons */}
+          {/* Buttons */}
           <div className="space-y-3 w-full">
-            {/* Continue as Guest Button */}
+            {/* Continue as Guest */}
             <button
               onClick={handleGuestLogin}
               disabled={loadingGuest || loadingGoogle}
@@ -74,7 +74,7 @@ export function AuthCard({ onSuccess }: AuthCardProps) {
             >
               {loadingGuest ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white dark:text-neutral-950" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Logging in as Guest...</span>
                 </>
               ) : (
@@ -82,7 +82,7 @@ export function AuthCard({ onSuccess }: AuthCardProps) {
               )}
             </button>
 
-            {/* Login with Google Button */}
+            {/* Login with Google */}
             <button
               onClick={handleGoogleLogin}
               disabled={loadingGuest || loadingGoogle}
@@ -90,29 +90,16 @@ export function AuthCard({ onSuccess }: AuthCardProps) {
             >
               {loadingGoogle ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-neutral-900 dark:text-neutral-100" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Connecting Google...</span>
                 </>
               ) : (
                 <>
-                  {/* Google SVG G Icon */}
                   <svg width="18" height="18" viewBox="0 0 24 24" className="shrink-0">
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.27v3.15C3.25 21.3 7.31 24 12 24z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.27C.46 8.23 0 10.06 0 12s.46 3.77 1.27 5.39l4.01-3.15z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.61l4.01 3.15c.95-2.85 3.6-4.96 6.72-4.96z"
-                    />
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.27v3.15C3.25 21.3 7.31 24 12 24z" />
+                    <path fill="#FBBC05" d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.27C.46 8.23 0 10.06 0 12s.46 3.77 1.27 5.39l4.01-3.15z" />
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.61l4.01 3.15c.95-2.85 3.6-4.96 6.72-4.96z" />
                   </svg>
                   <span>Login with Google</span>
                 </>
@@ -121,8 +108,8 @@ export function AuthCard({ onSuccess }: AuthCardProps) {
           </div>
         </div>
 
-        {/* Card Footer Legal Disclaimer */}
-        <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mt-6 max-w-[290px] leading-relaxed">
+        {/* Footer */}
+        <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mt-5 sm:mt-6 max-w-[290px] leading-relaxed">
           By clicking continue, you agree to our{" "}
           <a href="#" className="underline hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">
             Terms of Service

@@ -29,14 +29,6 @@ import {
   LogOut,
   X,
   Check,
-  User as UserIcon,
-  Sparkles,
-  ChevronRight,
-  Shield,
-  Clock,
-  CheckSquare,
-  Square,
-  AlertCircle,
 } from "lucide-react";
 
 interface KanbanBoardProps {
@@ -49,14 +41,14 @@ const COLUMNS = ["To Do", "Doing", "Completed", "On Hold"];
 export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(false);
 
-  // View Mode: "board" or "list"
+  // View Mode
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
 
-  // Fields Popover state
+  // Fields Popover
   const [isFieldsOpen, setIsFieldsOpen] = useState(false);
   const [visibleFields, setVisibleFields] = useState({
     priority: false,
@@ -67,19 +59,19 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     reporter: false,
   });
 
-  // Filter Popover state
+  // Filter Popover
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilterStatus, setSelectedFilterStatus] = useState("ALL");
   const [selectedFilterPriority, setSelectedFilterPriority] = useState("ALL");
   const [selectedFilterAssignee, setSelectedFilterAssignee] = useState("ALL");
 
-  // Modal state
+  // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeColumnForNew, setActiveColumnForNew] = useState("To Do");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null);
 
-  // Form State
+  // Form
   const [formData, setFormData] = useState({
     title: "",
     status: "To Do",
@@ -89,10 +81,11 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     tags: "Deployment,Deployment",
   });
 
-  // Refs for closing popovers on outside click
+  // Refs
   const fieldsRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
+  // Close popovers on outside click; close sidebar overlay on mobile
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (fieldsRef.current && !fieldsRef.current.contains(event.target as Node)) {
@@ -104,6 +97,20 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Open sidebar by default on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const loadTasks = async () => {
@@ -127,10 +134,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   }, [searchQuery, selectedFilterStatus, selectedFilterPriority]);
 
   const handleToggleField = (fieldKey: keyof typeof visibleFields) => {
-    setVisibleFields((prev) => ({
-      ...prev,
-      [fieldKey]: !prev[fieldKey],
-    }));
+    setVisibleFields((prev) => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
   };
 
   const handleOpenAddModal = (columnName: string) => {
@@ -196,103 +200,131 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
     onLogout();
   };
 
-  // Filtered Tasks
   const filteredTasks = tasks.filter((t) => {
-    if (selectedFilterAssignee !== "ALL" && (t.assigneeName || "Admin") !== selectedFilterAssignee) {
+    if (
+      selectedFilterAssignee !== "ALL" &&
+      (t.assigneeName || "Admin") !== selectedFilterAssignee
+    ) {
       return false;
     }
     return true;
   });
 
-  return (
-    <div className="flex h-screen bg-white dark:bg-[#09090B] text-neutral-900 dark:text-neutral-100 font-sans overflow-hidden transition-colors duration-200">
-      {/* 1. Left Sidebar Navigation */}
-      <aside
-        className={`${
-          sidebarOpen ? "w-60" : "w-0 -ml-60"
-        } transition-all duration-300 border-r border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#121215] flex flex-col justify-between shrink-0 z-20 overflow-hidden`}
-      >
-        <div className="p-4 space-y-6">
-          {/* Top User Profile */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-0.5 shrink-0 shadow-xs">
-                  <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-white text-xs font-bold">
-                    D
-                  </div>
-                </div>
+  const hasActiveFilters =
+    selectedFilterStatus !== "ALL" ||
+    selectedFilterPriority !== "ALL" ||
+    selectedFilterAssignee !== "ALL";
 
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-bold text-neutral-900 dark:text-white truncate">
-                      {user.name || "Dexter"}
-                    </span>
-                  </div>
-                  <span className="bg-[#FF5252] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md self-start inline-block tracking-tight">
-                    Mandira Datta
-                  </span>
+  // ─── Sidebar content (shared between overlay and desktop) ───────────────────
+  const SidebarContent = () => (
+    <>
+      <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+        {/* User Profile */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 via-pink-500 to-amber-400 p-0.5 shrink-0 shadow-xs">
+                <div className="w-full h-full rounded-full bg-neutral-900 dark:bg-neutral-900 flex items-center justify-center text-white text-xs font-bold">
+                  {(user.name || "D")[0].toUpperCase()}
                 </div>
               </div>
-
-              <ChevronsUpDown className="w-4 h-4 text-neutral-400 shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                  {user.name || "Dexter"}
+                </span>
+                <span className="bg-[#FF5252] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md self-start inline-block tracking-tight">
+                  Mandira Datta
+                </span>
+              </div>
             </div>
-          </div>
-
-          {/* Navigation Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 tracking-tight">
-              <span>Workspace</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </div>
-
-            <div className="space-y-1">
-              <button className="w-full bg-[#ECECEE] dark:bg-[#222226] text-neutral-900 dark:text-white font-semibold rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer shadow-2xs">
-                <Grid2X2 className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
-                <span>Tasks</span>
-              </button>
-
-              <button className="w-full text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/40 font-medium rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer transition-colors">
-                <Folder className="w-4 h-4 text-neutral-400" />
-                <span>Projects</span>
-              </button>
-            </div>
+            <ChevronsUpDown className="w-4 h-4 text-neutral-400 shrink-0" />
           </div>
         </div>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
-          <ThemeToggle />
-          <button
-            onClick={handleLogoutClick}
-            title="Log Out"
-            className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+        {/* Navigation */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 tracking-tight">
+            <span>Workspace</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </div>
+          <div className="space-y-1">
+            <button className="w-full bg-[#ECECEE] dark:bg-[#222226] text-neutral-900 dark:text-white font-semibold rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer shadow-2xs">
+              <Grid2X2 className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
+              <span>Tasks</span>
+            </button>
+            <button className="w-full text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/40 font-medium rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer transition-colors">
+              <Folder className="w-4 h-4 text-neutral-400" />
+              <span>Projects</span>
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between shrink-0">
+        <ThemeToggle />
+        <button
+          onClick={handleLogoutClick}
+          title="Log Out"
+          className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex h-screen bg-white dark:bg-[#09090B] text-neutral-900 dark:text-neutral-100 font-sans overflow-hidden transition-colors duration-200">
+
+      {/* ── Mobile sidebar backdrop overlay ───────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ───────────────────────────────────────────────────────────── */}
+      {/* Mobile: fixed overlay drawer — Desktop: static sidebar that shifts content */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-40 flex flex-col
+          w-64 sm:w-60
+          bg-white dark:bg-[#121215]
+          border-r border-neutral-200/80 dark:border-neutral-800
+          transition-transform duration-300 ease-in-out
+          lg:static lg:z-auto lg:translate-x-0 lg:shrink-0
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${!sidebarOpen ? "lg:w-0 lg:overflow-hidden lg:border-r-0" : "lg:w-60"}
+        `}
+      >
+        <SidebarContent />
       </aside>
 
-      {/* 2. Main Workspace */}
+      {/* ── Main workspace ────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#09090B] overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="h-14 border-b border-neutral-200/80 dark:border-neutral-800 px-6 flex items-center justify-between shrink-0 bg-white/90 dark:bg-[#09090B]/90 backdrop-blur-xs z-10">
-          <div className="flex items-center gap-4">
+
+        {/* ── Header ──────────────────────────────────────────────────────────── */}
+        <header className="h-14 border-b border-neutral-200/80 dark:border-neutral-800 px-3 sm:px-6 flex items-center justify-between shrink-0 bg-white/90 dark:bg-[#09090B]/90 backdrop-blur-xs z-10 gap-2">
+          
+          {/* Left: toggle + title */}
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
             >
               <PanelLeft className="w-4 h-4" />
             </button>
-
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">
               Tasks
             </h1>
           </div>
 
-          {/* Toolbar Actions */}
-          <div className="flex items-center gap-2.5">
-            {/* Search */}
+          {/* Right: toolbar */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+
+            {/* Search — expands inline */}
             {isSearchVisible ? (
               <div className="relative flex items-center">
                 <input
@@ -301,14 +333,11 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-7 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none w-48 transition-all"
+                  className="pl-8 pr-7 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none w-36 sm:w-48 transition-all"
                 />
                 <Search className="w-3.5 h-3.5 absolute left-2.5 text-neutral-400" />
                 <button
-                  onClick={() => {
-                    setIsSearchVisible(false);
-                    setSearchQuery("");
-                  }}
+                  onClick={() => { setIsSearchVisible(false); setSearchQuery(""); }}
                   className="absolute right-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -324,27 +353,23 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
               </button>
             )}
 
-            {/* Fields Button & Popover (Matching Figma Screenshot 223225) */}
+            {/* Fields button + popover */}
             <div className="relative" ref={fieldsRef}>
               <button
-                onClick={() => {
-                  setIsFieldsOpen(!isFieldsOpen);
-                  setIsFilterOpen(false);
-                }}
-                className={`border border-neutral-200/90 dark:border-neutral-800 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-2xs cursor-pointer ${
+                onClick={() => { setIsFieldsOpen(!isFieldsOpen); setIsFilterOpen(false); }}
+                className={`border border-neutral-200/90 dark:border-neutral-800 px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 shadow-2xs cursor-pointer ${
                   isFieldsOpen
                     ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                     : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/80"
                 }`}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Fields</span>
+                <span className="hidden sm:inline">Fields</span>
               </button>
 
-              {/* Fields Popover Container */}
               {isFieldsOpen && (
-                <div className="absolute right-0 top-9 w-64 bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 shadow-xl z-40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-                  {/* Segmented Control Switcher: List vs Board */}
+                <div className="absolute right-0 top-9 w-60 sm:w-64 bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 shadow-xl z-40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                  {/* View mode switcher */}
                   <div className="p-1 bg-[#F4F4F6] dark:bg-neutral-900 rounded-xl flex items-center gap-1">
                     <button
                       onClick={() => setViewMode("list")}
@@ -357,7 +382,6 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                       <ListIcon className="w-3.5 h-3.5" />
                       <span>List</span>
                     </button>
-
                     <button
                       onClick={() => setViewMode("board")}
                       className={`flex-1 py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
@@ -371,52 +395,42 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     </button>
                   </div>
 
-                  {/* Field Visibility Checkboxes */}
+                  {/* Field toggles */}
                   <div className="space-y-1.5 pt-1">
-                    {[
+                    {([
                       { key: "priority" as const, label: "Priority" },
                       { key: "members" as const, label: "Members" },
                       { key: "dueDate" as const, label: "Due Date" },
                       { key: "labels" as const, label: "Labels" },
                       { key: "status" as const, label: "Status" },
                       { key: "reporter" as const, label: "Reporter" },
-                    ].map(({ key, label }) => {
-                      const isChecked = visibleFields[key];
-                      return (
-                        <div
-                          key={key}
-                          onClick={() => handleToggleField(key)}
-                          className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/60 cursor-pointer transition-colors"
-                        >
-                          <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                            {label}
-                          </span>
-                          <div
-                            className={`w-4 h-4 rounded-md flex items-center justify-center transition-all ${
-                              isChecked
-                                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
-                                : "bg-neutral-200 dark:bg-neutral-800"
-                            }`}
-                          >
-                            {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
+                    ] as const).map(({ key, label }) => (
+                      <div
+                        key={key}
+                        onClick={() => handleToggleField(key)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/60 cursor-pointer transition-colors"
+                      >
+                        <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200">{label}</span>
+                        <div className={`w-4 h-4 rounded-md flex items-center justify-center transition-all ${
+                          visibleFields[key]
+                            ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
+                            : "bg-neutral-200 dark:bg-neutral-800"
+                        }`}>
+                          {visibleFields[key] && <Check className="w-3 h-3 stroke-[3]" />}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Filter Button & Popover */}
+            {/* Filter button + popover */}
             <div className="relative" ref={filterRef}>
               <button
-                onClick={() => {
-                  setIsFilterOpen(!isFilterOpen);
-                  setIsFieldsOpen(false);
-                }}
+                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsFieldsOpen(false); }}
                 className={`p-2 border border-neutral-200/90 dark:border-neutral-800 rounded-lg transition-colors cursor-pointer shadow-2xs ${
-                  isFilterOpen || selectedFilterStatus !== "ALL" || selectedFilterPriority !== "ALL" || selectedFilterAssignee !== "ALL"
+                  isFilterOpen || hasActiveFilters
                     ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                     : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/80"
                 }`}
@@ -425,20 +439,13 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                 <Filter className="w-4 h-4" />
               </button>
 
-              {/* Filter Popover Container */}
               {isFilterOpen && (
-                <div className="absolute right-0 top-9 w-64 bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-xl z-40 space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-9 w-60 sm:w-64 bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-xl z-40 space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                      Filter Tasks
-                    </span>
-                    {(selectedFilterStatus !== "ALL" || selectedFilterPriority !== "ALL" || selectedFilterAssignee !== "ALL") && (
+                    <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Filter Tasks</span>
+                    {hasActiveFilters && (
                       <button
-                        onClick={() => {
-                          setSelectedFilterStatus("ALL");
-                          setSelectedFilterPriority("ALL");
-                          setSelectedFilterAssignee("ALL");
-                        }}
+                        onClick={() => { setSelectedFilterStatus("ALL"); setSelectedFilterPriority("ALL"); setSelectedFilterAssignee("ALL"); }}
                         className="text-[11px] font-semibold text-red-500 hover:underline"
                       >
                         Reset
@@ -446,34 +453,24 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     )}
                   </div>
 
-                  {/* Status Filter */}
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Status
-                    </label>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Status</label>
                     <select
                       value={selectedFilterStatus}
                       onChange={(e) => setSelectedFilterStatus(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none"
+                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100"
                     >
                       <option value="ALL">All Statuses</option>
-                      {COLUMNS.map((col) => (
-                        <option key={col} value={col}>
-                          {col}
-                        </option>
-                      ))}
+                      {COLUMNS.map((col) => <option key={col} value={col}>{col}</option>)}
                     </select>
                   </div>
 
-                  {/* Priority Filter */}
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Priority
-                    </label>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Priority</label>
                     <select
                       value={selectedFilterPriority}
                       onChange={(e) => setSelectedFilterPriority(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none"
+                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100"
                     >
                       <option value="ALL">All Priorities</option>
                       <option value="LOW">Low</option>
@@ -483,15 +480,12 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     </select>
                   </div>
 
-                  {/* Member / Assignee Filter */}
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Member / Assignee
-                    </label>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Member / Assignee</label>
                     <select
                       value={selectedFilterAssignee}
                       onChange={(e) => setSelectedFilterAssignee(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none"
+                      className="w-full px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100"
                     >
                       <option value="ALL">All Members</option>
                       <option value="Admin">Admin</option>
@@ -508,22 +502,23 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
               )}
             </div>
 
-            {/* Primary + Add Task Button */}
+            {/* Add Task button */}
             <button
               onClick={() => handleOpenAddModal("To Do")}
-              className="bg-[#18181B] hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-xs rounded-lg px-3.5 py-1.5 flex items-center gap-1.5 shadow-sm cursor-pointer transition-all active:scale-[0.98]"
+              className="bg-[#18181B] hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-xs rounded-lg px-2.5 sm:px-3.5 py-1.5 flex items-center gap-1 sm:gap-1.5 shadow-sm cursor-pointer transition-all active:scale-[0.98]"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Task</span>
+              <span className="hidden sm:inline">Add Task</span>
             </button>
           </div>
         </header>
 
-        {/* 3. Main Display Area: BOARD VIEW or LIST VIEW */}
+        {/* ── Board / List area ──────────────────────────────────────────────── */}
         <div className="flex-1 overflow-auto bg-[#FAF9FB] dark:bg-[#09090B]">
+
           {viewMode === "board" ? (
-            /* BOARD VIEW (Kanban Columns) */
-            <div className="p-6 flex items-start gap-4 min-w-max pb-8">
+            /* BOARD VIEW */
+            <div className="p-3 sm:p-6 flex items-start gap-3 sm:gap-4 min-w-max pb-8">
               {COLUMNS.map((columnName) => {
                 const columnTasks = filteredTasks.filter(
                   (t) => (t.status || "To Do").toLowerCase() === columnName.toLowerCase()
@@ -532,22 +527,23 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                 return (
                   <div
                     key={columnName}
-                    className="w-[310px] shrink-0 bg-[#F4F4F6] dark:bg-[#141417] border border-neutral-200/60 dark:border-neutral-800/80 rounded-2xl p-3.5 flex flex-col gap-3 shadow-2xs"
+                    className="w-[280px] sm:w-[300px] lg:w-[310px] shrink-0 bg-[#F4F4F6] dark:bg-[#141417] border border-neutral-200/60 dark:border-neutral-800/80 rounded-2xl p-3 sm:p-3.5 flex flex-col gap-3 shadow-2xs"
                   >
-                    {/* Column Header */}
+                    {/* Column header */}
                     <div className="flex items-center justify-between px-1 pt-0.5">
                       <div className="flex items-center gap-2">
                         <GripVertical className="w-4 h-4 text-neutral-400 cursor-grab" />
                         <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
                           {columnName}
                         </h2>
+                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
+                          {columnTasks.length}
+                        </span>
                       </div>
-
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleOpenAddModal(columnName)}
                           className="p-1 rounded-md hover:bg-neutral-200/80 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
-                          title="Add Task"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
@@ -557,14 +553,14 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                       </div>
                     </div>
 
-                    {/* Task Cards */}
-                    <div className="space-y-3">
+                    {/* Task cards */}
+                    <div className="space-y-2.5 sm:space-y-3">
                       {columnTasks.map((task) => (
                         <div
                           key={task.id}
-                          className="relative bg-white dark:bg-[#1C1C20] border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-md transition-all space-y-3 group"
+                          className="relative bg-white dark:bg-[#1C1C20] border border-neutral-200/90 dark:border-neutral-800 rounded-xl p-3 sm:p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-md transition-all space-y-2.5 sm:space-y-3 group"
                         >
-                          {/* Title & Options */}
+                          {/* Title row */}
                           <div className="flex items-start justify-between gap-2">
                             <h3
                               onClick={() => handleOpenEditModal(task)}
@@ -572,14 +568,9 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             >
                               {task.title}
                             </h3>
-
                             <div className="relative shrink-0">
                               <button
-                                onClick={() =>
-                                  setActiveMenuTaskId(
-                                    activeMenuTaskId === task.id ? null : task.id
-                                  )
-                                }
+                                onClick={() => setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)}
                                 className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
                               >
                                 <MoreHorizontal className="w-4 h-4" />
@@ -587,9 +578,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
 
                               {activeMenuTaskId === task.id && (
                                 <div className="absolute right-0 top-7 w-44 bg-white dark:bg-[#222226] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg p-1.5 z-30 space-y-1 text-xs">
-                                  <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                                    Move Column
-                                  </div>
+                                  <div className="px-2 py-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Move Column</div>
                                   {COLUMNS.filter((c) => c !== columnName).map((targetCol) => (
                                     <button
                                       key={targetCol}
@@ -611,10 +600,9 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             </div>
                           </div>
 
-                          {/* Member / Assignee Field */}
                           {visibleFields.members && (
                             <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 p-0.5 shrink-0 flex items-center justify-center text-[9px] font-bold text-white">
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                                 {(task.assigneeName || "A")[0]}
                               </div>
                               <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
@@ -623,16 +611,12 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             </div>
                           )}
 
-                          {/* Priority Field */}
                           {visibleFields.priority && (
-                            <div className="inline-block">
-                              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                {task.priority || "MEDIUM"}
-                              </span>
-                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 inline-block">
+                              {task.priority || "MEDIUM"}
+                            </span>
                           )}
 
-                          {/* Due Date Field */}
                           {visibleFields.dueDate && (
                             <div className="bg-[#FFF0F0] dark:bg-red-950/60 text-[#FF4D4D] dark:text-red-300 font-bold text-[11px] px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
@@ -640,35 +624,25 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                             </div>
                           )}
 
-                          {/* Labels Field */}
                           {visibleFields.labels && (
                             <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                              {(task.tags || "Deployment,Deployment")
-                                .split(",")
-                                .map((tag, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="border border-neutral-200/90 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 font-medium text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1"
-                                  >
-                                    <Tag className="w-2.5 h-2.5 text-neutral-400" />
-                                    <span>{tag.trim()}</span>
-                                  </span>
-                                ))}
+                              {(task.tags || "Deployment,Deployment").split(",").map((tag, idx) => (
+                                <span key={idx} className="border border-neutral-200/90 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 font-medium text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <Tag className="w-2.5 h-2.5 text-neutral-400" />
+                                  {tag.trim()}
+                                </span>
+                              ))}
                             </div>
                           )}
 
-                          {/* Status Field */}
                           {visibleFields.status && (
                             <div className="text-[11px] font-semibold text-neutral-500">
                               Status: <span className="text-neutral-900 dark:text-white font-bold">{task.status}</span>
                             </div>
                           )}
 
-                          {/* Reporter Field */}
                           {visibleFields.reporter && (
-                            <div className="text-[11px] font-medium text-neutral-400">
-                              Reporter: Dexter
-                            </div>
+                            <div className="text-[11px] font-medium text-neutral-400">Reporter: Dexter</div>
                           )}
                         </div>
                       ))}
@@ -686,8 +660,8 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
               })}
             </div>
           ) : (
-            /* LIST VIEW (Structured Tabular Grouped View) */
-            <div className="p-6 max-w-6xl mx-auto space-y-6">
+            /* LIST VIEW */
+            <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
               {COLUMNS.map((columnName) => {
                 const groupTasks = filteredTasks.filter(
                   (t) => (t.status || "To Do").toLowerCase() === columnName.toLowerCase()
@@ -698,55 +672,47 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     key={columnName}
                     className="bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-2xs"
                   >
-                    {/* List Section Header */}
-                    <div className="bg-[#F4F4F6] dark:bg-[#18181B] px-5 py-3 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
+                    {/* Section header */}
+                    <div className="bg-[#F4F4F6] dark:bg-[#18181B] px-4 sm:px-5 py-3 border-b border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                          {columnName}
-                        </h2>
+                        <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{columnName}</h2>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-bold">
                           {groupTasks.length}
                         </span>
                       </div>
-
                       <button
                         onClick={() => handleOpenAddModal(columnName)}
                         className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Add Task</span>
+                        <span className="hidden sm:inline">Add Task</span>
                       </button>
                     </div>
 
-                    {/* List Items */}
                     {groupTasks.length === 0 ? (
-                      <div className="p-4 text-xs text-neutral-400 text-center">
-                        No tasks in {columnName}
-                      </div>
+                      <div className="p-4 text-xs text-neutral-400 text-center">No tasks in {columnName}</div>
                     ) : (
                       <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
                         {groupTasks.map((task) => (
                           <div
                             key={task.id}
-                            className="px-5 py-3.5 flex items-center justify-between gap-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors group"
+                            className="px-4 sm:px-5 py-3 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors group"
                           >
-                            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2.5 sm:gap-3.5 flex-1 min-w-0">
                               <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                                 {task.title}
                               </span>
-
                               {visibleFields.priority && (
-                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 shrink-0">
                                   {task.priority || "MEDIUM"}
                                 </span>
                               )}
                             </div>
 
-                            {/* Flexible Fields Columns */}
-                            <div className="flex items-center gap-4 text-xs shrink-0">
+                            <div className="flex items-center gap-2 sm:gap-4 text-xs shrink-0">
                               {visibleFields.members && (
-                                <div className="flex items-center gap-1.5 w-28">
-                                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 p-0.5 shrink-0 flex items-center justify-center text-[9px] font-bold text-white">
+                                <div className="hidden sm:flex items-center gap-1.5 w-24 lg:w-28">
+                                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                                     {(task.assigneeName || "A")[0]}
                                   </div>
                                   <span className="font-semibold text-neutral-700 dark:text-neutral-300 truncate">
@@ -756,43 +722,34 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                               )}
 
                               {visibleFields.dueDate && (
-                                <div className="bg-[#FFF0F0] dark:bg-red-950/60 text-[#FF4D4D] dark:text-red-300 font-bold text-[11px] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                <div className="hidden sm:flex bg-[#FFF0F0] dark:bg-red-950/60 text-[#FF4D4D] dark:text-red-300 font-bold text-[11px] px-2.5 py-0.5 rounded-full items-center gap-1">
                                   <Calendar className="w-3 h-3" />
                                   <span>{task.dueDate || "29 Jul"}</span>
                                 </div>
                               )}
 
                               {visibleFields.labels && (
-                                <div className="flex items-center gap-1">
-                                  {(task.tags || "Deployment")
-                                    .split(",")
-                                    .slice(0, 2)
-                                    .map((tag, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 font-medium text-[10px] px-1.5 py-0.5 rounded-full"
-                                      >
-                                        {tag.trim()}
-                                      </span>
-                                    ))}
+                                <div className="hidden md:flex items-center gap-1">
+                                  {(task.tags || "Deployment").split(",").slice(0, 2).map((tag, idx) => (
+                                    <span key={idx} className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 font-medium text-[10px] px-1.5 py-0.5 rounded-full">
+                                      {tag.trim()}
+                                    </span>
+                                  ))}
                                 </div>
                               )}
 
                               {visibleFields.status && (
-                                <span className="font-bold text-neutral-500 text-xs">
+                                <span className="hidden sm:block font-bold text-neutral-500 text-xs">
                                   {task.status}
                                 </span>
                               )}
 
-                              {/* Actions */}
-                              <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                                <button
-                                  onClick={() => handleOpenEditModal(task)}
-                                  className="p-1 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => handleOpenEditModal(task)}
+                                className="p-1 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -806,17 +763,17 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
         </div>
       </main>
 
-      {/* 4. Modal for Create / Edit Task */}
+      {/* ── Create / Edit Modal ────────────────────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full sm:max-w-md bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-neutral-800 rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-xl animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-50">
                 {editingTask ? "Edit Task" : `Add Task to ${activeColumnForNew}`}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -833,7 +790,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                   placeholder="e.g. Write API Documentation"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
+                  className="w-full px-3.5 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
                 />
               </div>
 
@@ -845,16 +802,11 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100"
                   >
-                    {COLUMNS.map((col) => (
-                      <option key={col} value={col}>
-                        {col}
-                      </option>
-                    ))}
+                    {COLUMNS.map((col) => <option key={col} value={col}>{col}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                     Assignee Name
@@ -864,7 +816,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     placeholder="Admin, QA Team..."
                     value={formData.assigneeName}
                     onChange={(e) => setFormData({ ...formData, assigneeName: e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
                   />
                 </div>
               </div>
@@ -879,20 +831,19 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                     placeholder="29 Jul, 30 Jul..."
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Tags (Comma Separated)
+                    Tags
                   </label>
                   <input
                     type="text"
                     placeholder="Deployment, Testing..."
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
                   />
                 </div>
               </div>
@@ -901,13 +852,13 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                  className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#18181B] hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-bold text-xs rounded-xl shadow-xs"
+                  className="px-5 py-2 bg-[#18181B] hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-bold text-xs rounded-xl shadow-xs transition-all active:scale-[0.98]"
                 >
                   {editingTask ? "Save Changes" : "Add Task"}
                 </button>
