@@ -19,12 +19,16 @@ export class TasksService {
     if (category && category !== 'ALL') {
       where.category = category;
     }
-    if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { description: { contains: search } },
-        { tags: { contains: search } },
-        { assigneeName: { contains: search } },
+    if (search && search.trim()) {
+      where.AND = [
+        {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+            { tags: { contains: search, mode: 'insensitive' } },
+            { assigneeName: { contains: search, mode: 'insensitive' } },
+          ],
+        },
       ];
     }
 
