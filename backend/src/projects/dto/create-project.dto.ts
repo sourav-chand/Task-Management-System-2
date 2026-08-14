@@ -1,17 +1,9 @@
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class CreateTaskDto {
+export class CreateProjectDto {
   @IsString()
   @IsNotEmpty()
-  title: string;
-
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @IsString()
-  @IsOptional()
-  status?: string; // "To Do", "Doing", "Completed", "On Hold"
+  name: string;
 
   @IsString()
   @IsOptional()
@@ -19,15 +11,7 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
-  category?: string;
-
-  @IsString()
-  @IsOptional()
-  assigneeName?: string;
-
-  @IsString()
-  @IsOptional()
-  tags?: string;
+  lead?: string;
 
   @IsString()
   @IsOptional()
@@ -35,5 +19,13 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
-  projectId?: string;
+  status?: string;
+
+  @IsString()
+  @IsOptional()
+  team?: string;
+
+  @IsString()
+  @IsOptional()
+  labels?: string;
 }

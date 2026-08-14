@@ -6,19 +6,18 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
+import { ProjectsService } from './projects.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { JwtService } from '@nestjs/jwt';
 
-@Controller('tasks')
-export class TasksController {
+@Controller('projects')
+export class ProjectsController {
   constructor(
-    private readonly tasksService: TasksService,
+    private readonly projectsService: ProjectsService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -36,52 +35,45 @@ export class TasksController {
   }
 
   @Get()
-  async getTasks(
-    @Headers('authorization') authHeader: string,
-    @Query('status') status?: string,
-    @Query('priority') priority?: string,
-    @Query('category') category?: string,
-    @Query('search') search?: string,
-    @Query('projectId') projectId?: string,
-  ) {
+  async getProjects(@Headers('authorization') authHeader: string) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.getTasks(userId, status, priority, category, search, projectId);
+    return this.projectsService.getProjects(userId);
   }
 
   @Get(':id')
-  async getTaskById(
+  async getProjectById(
     @Headers('authorization') authHeader: string,
     @Param('id') id: string,
   ) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.getTaskById(id, userId);
+    return this.projectsService.getProjectById(id, userId);
   }
 
   @Post()
-  async createTask(
+  async createProject(
     @Headers('authorization') authHeader: string,
-    @Body() dto: CreateTaskDto,
+    @Body() dto: CreateProjectDto,
   ) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.createTask(userId, dto);
+    return this.projectsService.createProject(userId, dto);
   }
 
   @Patch(':id')
-  async updateTask(
+  async updateProject(
     @Headers('authorization') authHeader: string,
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
+    @Body() dto: UpdateProjectDto,
   ) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.updateTask(id, userId, dto);
+    return this.projectsService.updateProject(id, userId, dto);
   }
 
   @Delete(':id')
-  async deleteTask(
+  async deleteProject(
     @Headers('authorization') authHeader: string,
     @Param('id') id: string,
   ) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.deleteTask(id, userId);
+    return this.projectsService.deleteProject(id, userId);
   }
 }

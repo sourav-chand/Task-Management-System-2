@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TasksModule } from '../tasks/tasks.module';
+import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { TasksModule } from '../tasks/tasks.module';
       signOptions: { expiresIn: '7d' },
     }),
     forwardRef(() => TasksModule),
+    forwardRef(() => ProjectsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService],
