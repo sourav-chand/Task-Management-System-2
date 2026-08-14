@@ -166,6 +166,10 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
         if (data.tags) {
           setLabels(data.tags.split(",").map(t => t.trim()).filter(Boolean));
         }
+        // Auto-enter title edit mode for freshly created tasks
+        if (data.title === "Untitled Task") {
+          setEditingTitle(true);
+        }
       }
       setLoading(false);
     }
@@ -387,7 +391,10 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                 </div>
 
                 {/* Settings */}
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
+                <button
+                  onClick={() => { setWorkspacePopoverOpen(false); router.push("/settings"); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer"
+                >
                   <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                   Settings
                 </button>

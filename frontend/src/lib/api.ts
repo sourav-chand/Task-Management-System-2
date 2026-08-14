@@ -229,6 +229,112 @@ export async function apiDeleteTask(id: string): Promise<void> {
   }
 }
 
+// ─── Project data ────────────────────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  name: string;
+  priority: string;
+  lead: string;
+  dueDate: string;
+  status: string;
+  team: string;
+  labels: string;
+}
+
+export const PROJECTS: Project[] = [
+  { id: 'p1', name: 'Design Homepage',       priority: 'High',   lead: 'Dexter',  dueDate: '30 Aug', status: 'In Progress', team: 'Design', labels: 'Frontend' },
+  { id: 'p2', name: 'Develop Login Feature', priority: 'Low',    lead: 'Admin',   dueDate: '05 Sep', status: 'To Do',       team: 'Dev',    labels: 'Backend'  },
+  { id: 'p3', name: 'Test Payment Gateway',  priority: 'Medium', lead: 'QA Team', dueDate: '12 Sep', status: 'In Progress', team: 'QA',     labels: 'Testing'  },
+];
+
+export function getProjectById(id: string): Project | undefined {
+  return PROJECTS.find(p => p.id === id);
+}
+
+// Per-project seeded tasks — keyed by project id
+const PROJECT_TASKS: Record<string, Task[]> = {
+  p1: [
+    { id: 'p1-t1', title: 'Design Homepage',        status: 'To Do',     priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
+    { id: 'p1-t2', title: 'Develop Login Feature',  status: 'To Do',     priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
+    { id: 'p1-t3', title: 'Test Payment Gateway',   status: 'To Do',     priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
+    { id: 'p1-t4', title: 'Design Homepage',        status: 'Doing',     priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
+    { id: 'p1-t5', title: 'Develop Login Feature',  status: 'Doing',     priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
+    { id: 'p1-t6', title: 'Test Payment Gateway',   status: 'Doing',     priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
+    { id: 'p1-t7', title: 'Design Homepage',        status: 'Completed', priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
+    { id: 'p1-t8', title: 'Develop Login Feature',  status: 'Completed', priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
+    { id: 'p1-t9', title: 'Test Payment Gateway',   status: 'Completed', priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
+  ],
+  p2: [
+    { id: 'p2-t1', title: 'Set Up Auth Endpoints',  status: 'To Do',     priority: 'HIGH',   assigneeName: 'Admin',   dueDate: '01 Sep 2026' },
+    { id: 'p2-t2', title: 'Design Login UI',         status: 'To Do',     priority: 'MEDIUM', assigneeName: 'Designer', dueDate: '03 Sep 2026' },
+    { id: 'p2-t3', title: 'Write Auth Unit Tests',   status: 'Doing',     priority: 'MEDIUM', assigneeName: 'QA Team', dueDate: '04 Sep 2026' },
+    { id: 'p2-t4', title: 'Integrate OAuth Provider',status: 'Doing',     priority: 'URGENT', assigneeName: 'Admin',   dueDate: '05 Sep 2026' },
+    { id: 'p2-t5', title: 'Stakeholder Sign-Off',    status: 'Completed', priority: 'LOW',    assigneeName: 'Admin',   dueDate: '28 Aug 2026' },
+  ],
+  p3: [
+    { id: 'p3-t1', title: 'Write Payment Test Cases',    status: 'To Do',     priority: 'HIGH',   assigneeName: 'QA Team', dueDate: '08 Sep 2026' },
+    { id: 'p3-t2', title: 'Mock Payment API',             status: 'To Do',     priority: 'MEDIUM', assigneeName: 'Dev Team', dueDate: '09 Sep 2026' },
+    { id: 'p3-t3', title: 'Run Integration Tests',        status: 'Doing',     priority: 'URGENT', assigneeName: 'QA Team', dueDate: '11 Sep 2026' },
+    { id: 'p3-t4', title: 'Fix Failed Transactions',      status: 'Doing',     priority: 'HIGH',   assigneeName: 'Dev Team', dueDate: '12 Sep 2026' },
+    { id: 'p3-t5', title: 'Document Test Results',        status: 'Completed', priority: 'LOW',    assigneeName: 'QA Team', dueDate: '06 Sep 2026' },
+    { id: 'p3-t6', title: 'Security Review',              status: 'On Hold',   priority: 'URGENT', assigneeName: 'Security', dueDate: '14 Sep 2026' },
+  ],
+};
+
+// Returns tasks for a given project id (localStorage-backed so CRUD works)
+export function apiFetchProjectTasks(projectId: string): Task[] {
+  if (typeof window === 'undefined') return PROJECT_TASKS[projectId] ?? [];
+  const key = `pyramid_project_tasks_${projectId}`;
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    const seed = PROJECT_TASKS[projectId] ?? [];
+    localStorage.setItem(key, JSON.stringify(seed));
+    return seed;
+  }
+  try { return JSON.parse(raw); } catch { return PROJECT_TASKS[projectId] ?? []; }
+}
+
+export function apiCreateProjectTask(projectId: string, dto: Partial<Task>): Task {
+  const tasks = apiFetchProjectTasks(projectId);
+  const newTask: Task = {
+    id: `${projectId}-t${Date.now()}`,
+    title: dto.title || 'New Task',
+    description: dto.description || '',
+    status: dto.status || 'To Do',
+    priority: dto.priority || 'MEDIUM',
+    assigneeName: dto.assigneeName || 'Admin',
+    dueDate: dto.dueDate || '—',
+    tags: dto.tags || '',
+    createdAt: new Date().toISOString(),
+  };
+  tasks.push(newTask);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
+  }
+  return newTask;
+}
+
+export function apiUpdateProjectTask(projectId: string, taskId: string, dto: Partial<Task>): Task {
+  const tasks = apiFetchProjectTasks(projectId);
+  const idx = tasks.findIndex(t => t.id === taskId);
+  if (idx !== -1) {
+    tasks[idx] = { ...tasks[idx], ...dto };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
+    }
+    return tasks[idx];
+  }
+  return dto as Task;
+}
+
+export function apiDeleteProjectTask(projectId: string, taskId: string): void {
+  const tasks = apiFetchProjectTasks(projectId).filter(t => t.id !== taskId);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
+  }
+}
+
 // Initial seed tasks matching Figma Screen 2
 const FIGMA_INITIAL_TASKS: Task[] = [
   // To Do

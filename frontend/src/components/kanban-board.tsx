@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   User,
@@ -45,7 +45,8 @@ interface KanbanBoardProps {
 const COLUMNS = ["To Do", "Doing", "Completed", "On Hold"];
 
 export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
-  const router = useRouter();
+  const router   = useRouter();
+  const pathname = usePathname();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -189,17 +190,8 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
   };
 
   const handleOpenEditModal = (task: Task) => {
-    setEditingTask(task);
-    setFormData({
-      title: task.title,
-      status: task.status,
-      priority: task.priority || "MEDIUM",
-      assigneeName: task.assigneeName || "Admin",
-      dueDate: task.dueDate || "29 Jul",
-      tags: task.tags || "Deployment",
-    });
-    setIsModalOpen(true);
     setActiveMenuTaskId(null);
+    router.push(`/tasks/${task.id}`);
   };
 
   const handleSubmitModal = async (e: React.FormEvent) => {
@@ -340,7 +332,10 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                 </div>
 
                 {/* Settings */}
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer">
+                <button
+                  onClick={() => { setWorkspacePopoverOpen(false); router.push("/settings"); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors cursor-pointer"
+                >
                   <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                   Settings
                 </button>
@@ -445,12 +440,26 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
             <ChevronDown className="w-3.5 h-3.5" />
           </div>
           <div className="space-y-1">
-            <button className="w-full bg-[#ECECEE] dark:bg-[#222226] text-neutral-900 dark:text-white font-semibold rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer shadow-2xs">
-              <Grid2X2 className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
+            <button
+              onClick={() => router.push("/")}
+              className={`w-full font-medium rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer transition-colors ${
+                pathname === "/"
+                  ? "bg-[#ECECEE] dark:bg-[#222226] text-neutral-900 dark:text-white font-semibold shadow-2xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+              }`}
+            >
+              <Grid2X2 className="w-4 h-4" />
               <span>Tasks</span>
             </button>
-            <button className="w-full text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/40 font-medium rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer transition-colors">
-              <Folder className="w-4 h-4 text-neutral-400" />
+            <button
+              onClick={() => router.push("/projects")}
+              className={`w-full font-medium rounded-xl px-3 py-2 flex items-center gap-2.5 text-sm cursor-pointer transition-colors ${
+                pathname === "/projects"
+                  ? "bg-[#ECECEE] dark:bg-[#222226] text-neutral-900 dark:text-white font-semibold shadow-2xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+              }`}
+            >
+              <Folder className="w-4 h-4" />
               <span>Projects</span>
             </button>
           </div>
@@ -691,7 +700,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
 
             {/* Add Task button */}
             <button
-              onClick={() => handleOpenAddModal("To Do")}
+              onClick={() => router.push(`/tasks/new?status=${encodeURIComponent("To Do")}`)}
               className="bg-[#18181B] hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-xs rounded-lg px-2.5 sm:px-3.5 py-1.5 flex items-center gap-1 sm:gap-1.5 shadow-sm cursor-pointer transition-all active:scale-[0.98]"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -732,7 +741,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleOpenAddModal(columnName)}
+                          onClick={() => router.push(`/tasks/new?status=${encodeURIComponent(columnName)}`)}
                           className="p-1 rounded-md hover:bg-neutral-200/80 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
                         >
                           <Plus className="w-4 h-4" />
@@ -844,7 +853,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
 
                     {/* Add Task footer */}
                     <button
-                      onClick={() => handleOpenAddModal(columnName)}
+                      onClick={() => router.push(`/tasks/new?status=${encodeURIComponent(columnName)}`)}
                       className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white px-1 py-2 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer w-full mt-1"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -991,7 +1000,7 @@ export function KanbanBoard({ user, onLogout }: KanbanBoardProps) {
 
                       {/* Add Task row */}
                       <button
-                        onClick={() => handleOpenAddModal(columnName)}
+                        onClick={() => router.push(`/tasks/new?status=${encodeURIComponent(columnName)}`)}
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer border-t border-neutral-100 dark:border-neutral-800/60"
                       >
                         <Plus className="w-3.5 h-3.5" />
