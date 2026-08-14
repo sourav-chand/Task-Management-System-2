@@ -42,9 +42,10 @@ export class TasksController {
     @Query('priority') priority?: string,
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('projectId') projectId?: string,
   ) {
     const userId = this.extractUserId(authHeader);
-    return this.tasksService.getTasks(userId, status, priority, category, search);
+    return this.tasksService.getTasks(userId, status, priority, category, search, projectId);
   }
 
   @Get(':id')

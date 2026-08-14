@@ -32,4 +32,8 @@ export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   dueDate?: string;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
 }
