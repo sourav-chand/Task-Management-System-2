@@ -7,8 +7,14 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TasksService {
   constructor(private prisma: PrismaService) {}
 
-  async getTasks(userId: string, status?: string, priority?: string, category?: string, search?: string) {
+  async getTasks(userId: string, status?: string, priority?: string, category?: string, search?: string, projectId?: string) {
     const where: any = { userId };
+
+    if (projectId) {
+      where.projectId = projectId;
+    } else if (!projectId) {
+      // When no projectId filter, return all tasks (standalone + project tasks)
+    }
 
     if (status && status !== 'ALL') {
       where.status = status;
@@ -49,6 +55,16 @@ export class TasksService {
   }
 
   async createTask(userId: string, dto: CreateTaskDto) {
+    let projectId: string | undefined = undefined;
+    if (dto.projectId) {
+      const project = await this.prisma.project.findFirst({
+        where: { id: dto.projectId, userId },
+      });
+      if (project) {
+        projectId = project.id;
+      }
+    }
+
     return this.prisma.task.create({
       data: {
         title: dto.title,
@@ -60,6 +76,7 @@ export class TasksService {
         tags: dto.tags || 'Deployment,Deployment',
         dueDate: dto.dueDate || '29 Jul',
         userId,
+        ...(projectId && { projectId }),
       },
     });
   }
@@ -78,6 +95,7 @@ export class TasksService {
         ...(dto.assigneeName !== undefined && { assigneeName: dto.assigneeName }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
         ...(dto.dueDate !== undefined && { dueDate: dto.dueDate }),
+        ...(dto.projectId !== undefined && { projectId: dto.projectId || null }),
       },
     });
   }
