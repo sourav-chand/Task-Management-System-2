@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { User, clearStoredToken } from "@/lib/api";
+import { User, Project, clearStoredToken, apiFetchProjects, apiCreateProject, apiUpdateProject, apiDeleteProject } from "@/lib/api";
 import {
   PanelLeft,
   Search,
@@ -33,25 +33,6 @@ import {
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type Priority = "No Priority" | "Urgent" | "High" | "Medium" | "Low";
-
-interface Project {
-  id: string;
-  name: string;
-  priority: Priority;
-  lead: string;
-  dueDate: string;
-  status: string;
-  team: string;
-  labels: string;
-}
-
-const INITIAL_PROJECTS: Project[] = [
-  { id: "p1", name: "Design Homepage",        priority: "High",       lead: "Dexter",  dueDate: "30 Aug", status: "In Progress", team: "Design",   labels: "Frontend" },
-  { id: "p2", name: "Develop Login Feature",  priority: "Low",        lead: "Admin",   dueDate: "05 Sep", status: "To Do",       team: "Dev",      labels: "Backend"  },
-  { id: "p3", name: "Test Payment Gateway",   priority: "Medium",     lead: "QA Team", dueDate: "12 Sep", status: "In Progress", team: "QA",       labels: "Testing"  },
-];
-
-// ─── Priority helpers ────────────────────────────────────────────────────────
 
 const PRIORITY_COLORS: Record<Priority, string> = {
   "No Priority": "text-neutral-400 dark:text-neutral-500",
@@ -94,7 +75,7 @@ export function ProjectsPage({ user, onLogout }: ProjectsPageProps) {
   const pathname = usePathname();
 
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
-  const [projects,         setProjects]          = useState<Project[]>(INITIAL_PROJECTS);
+  const [projects,         setProjects]          = useState<Project[]>([]);
   const [searchQuery,      setSearchQuery]       = useState("");
 
   // ── Fields popover ──────────────────────────────────────────────────────────
@@ -162,6 +143,11 @@ export function ProjectsPage({ user, onLogout }: ProjectsPageProps) {
     typeof window !== "undefined" ? localStorage.getItem("pyramid_accent_color") || "Blue" : "Blue"
   );
 
+  // ── Load projects from backend ────────────────────────────────────────────
+  useEffect(() => {
+    apiFetchProjects().then(setProjects);
+  }, []);
+
   // ── Close popovers on outside click ─────────────────────────────────────────
   React.useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -187,32 +173,45 @@ export function ProjectsPage({ user, onLogout }: ProjectsPageProps) {
   const handleToggleField = (key: keyof typeof visibleFields) =>
     setVisibleFields(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const handleAddProject = (e: React.FormEvent) => {
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    const newProject: Project = {
-      id:       `p-${Date.now()}`,
-      name:     formData.name,
-      priority: formData.priority,
-      lead:     formData.lead || "Admin",
-      dueDate:  formData.dueDate || "—",
-      status:   formData.status,
-      team:     formData.team || "—",
-      labels:   formData.labels || "—",
-    };
-    setProjects(prev => [...prev, newProject]);
-    setIsModalOpen(false);
-    setFormData({ name: "", priority: "Medium", lead: "", dueDate: "", status: "To Do", team: "", labels: "" });
+    try {
+      const newProject = await apiCreateProject({
+        name: formData.name,
+        priority: formData.priority,
+        lead: formData.lead || "Admin",
+        dueDate: formData.dueDate || "—",
+        status: formData.status,
+        team: formData.team || "—",
+        labels: formData.labels || "—",
+      });
+      setProjects(prev => [...prev, newProject]);
+      setIsModalOpen(false);
+      setFormData({ name: "", priority: "Medium", lead: "", dueDate: "", status: "To Do", team: "", labels: "" });
+    } catch (err) {
+      console.error("Failed to create project:", err);
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await apiDeleteProject(id);
+      setProjects(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+    }
     setMenuProjectId(null);
     setMenuPos(null);
   };
 
-  const handleChangePriority = (id: string, priority: Priority) => {
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, priority } : p));
+  const handleChangePriority = async (id: string, priority: Priority) => {
+    try {
+      await apiUpdateProject(id, { priority });
+      setProjects(prev => prev.map(p => p.id === id ? { ...p, priority } : p));
+    } catch (err) {
+      console.error("Failed to update project:", err);
+    }
     setActivePriorityId(null);
     setPriorityDropdownPos(null);
   };
@@ -639,8 +638,8 @@ export function ProjectsPage({ user, onLogout }: ProjectsPageProps) {
                         }}
                         className="flex items-center gap-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg px-1.5 py-0.5 transition-colors cursor-pointer"
                       >
-                        <PriorityIcon priority={project.priority} />
-                        <span className={`text-sm font-medium ${PRIORITY_COLORS[project.priority]}`}>
+                        <PriorityIcon priority={project.priority as Priority} />
+                        <span className={`text-sm font-medium ${PRIORITY_COLORS[project.priority as Priority] ?? PRIORITY_COLORS["No Priority"]}`}>
                           {project.priority}
                         </span>
                       </button>
