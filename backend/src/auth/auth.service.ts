@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
+import { ProjectsService } from '../projects/projects.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private tasksService: TasksService,
+    private projectsService: ProjectsService,
     private jwtService: JwtService,
   ) {}
 
@@ -28,6 +30,7 @@ export class AuthService {
     }
 
     await this.tasksService.seedFigmaDemoTasks(guestUser.id);
+    await this.projectsService.seedDefaultProjects(guestUser.id);
 
     const token = this.jwtService.sign({
       sub: guestUser.id,
@@ -62,6 +65,7 @@ export class AuthService {
     }
 
     await this.tasksService.seedFigmaDemoTasks(user.id);
+    await this.projectsService.seedDefaultProjects(user.id);
 
     const token = this.jwtService.sign({
       sub: user.id,
