@@ -16,6 +16,7 @@ export interface Task {
   assigneeName?: string;
   tags?: string;
   dueDate?: string;
+  projectId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -240,99 +241,121 @@ export interface Project {
   status: string;
   team: string;
   labels: string;
+  _count?: { tasks: number };
 }
 
-export const PROJECTS: Project[] = [
-  { id: 'p1', name: 'Design Homepage',       priority: 'High',   lead: 'Dexter',  dueDate: '30 Aug', status: 'In Progress', team: 'Design', labels: 'Frontend' },
-  { id: 'p2', name: 'Develop Login Feature', priority: 'Low',    lead: 'Admin',   dueDate: '05 Sep', status: 'To Do',       team: 'Dev',    labels: 'Backend'  },
-  { id: 'p3', name: 'Test Payment Gateway',  priority: 'Medium', lead: 'QA Team', dueDate: '12 Sep', status: 'In Progress', team: 'QA',     labels: 'Testing'  },
-];
-
-export function getProjectById(id: string): Project | undefined {
-  return PROJECTS.find(p => p.id === id);
-}
-
-// Per-project seeded tasks — keyed by project id
-const PROJECT_TASKS: Record<string, Task[]> = {
-  p1: [
-    { id: 'p1-t1', title: 'Design Homepage',        status: 'To Do',     priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
-    { id: 'p1-t2', title: 'Develop Login Feature',  status: 'To Do',     priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
-    { id: 'p1-t3', title: 'Test Payment Gateway',   status: 'To Do',     priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
-    { id: 'p1-t4', title: 'Design Homepage',        status: 'Doing',     priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
-    { id: 'p1-t5', title: 'Develop Login Feature',  status: 'Doing',     priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
-    { id: 'p1-t6', title: 'Test Payment Gateway',   status: 'Doing',     priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
-    { id: 'p1-t7', title: 'Design Homepage',        status: 'Completed', priority: 'HIGH',   assigneeName: 'Dexter',  dueDate: '12 Sep 2026' },
-    { id: 'p1-t8', title: 'Develop Login Feature',  status: 'Completed', priority: 'LOW',    assigneeName: 'CN',      dueDate: '15 Sep 2026' },
-    { id: 'p1-t9', title: 'Test Payment Gateway',   status: 'Completed', priority: 'MEDIUM', assigneeName: '',        dueDate: '18 Sep 2026' },
-  ],
-  p2: [
-    { id: 'p2-t1', title: 'Set Up Auth Endpoints',  status: 'To Do',     priority: 'HIGH',   assigneeName: 'Admin',   dueDate: '01 Sep 2026' },
-    { id: 'p2-t2', title: 'Design Login UI',         status: 'To Do',     priority: 'MEDIUM', assigneeName: 'Designer', dueDate: '03 Sep 2026' },
-    { id: 'p2-t3', title: 'Write Auth Unit Tests',   status: 'Doing',     priority: 'MEDIUM', assigneeName: 'QA Team', dueDate: '04 Sep 2026' },
-    { id: 'p2-t4', title: 'Integrate OAuth Provider',status: 'Doing',     priority: 'URGENT', assigneeName: 'Admin',   dueDate: '05 Sep 2026' },
-    { id: 'p2-t5', title: 'Stakeholder Sign-Off',    status: 'Completed', priority: 'LOW',    assigneeName: 'Admin',   dueDate: '28 Aug 2026' },
-  ],
-  p3: [
-    { id: 'p3-t1', title: 'Write Payment Test Cases',    status: 'To Do',     priority: 'HIGH',   assigneeName: 'QA Team', dueDate: '08 Sep 2026' },
-    { id: 'p3-t2', title: 'Mock Payment API',             status: 'To Do',     priority: 'MEDIUM', assigneeName: 'Dev Team', dueDate: '09 Sep 2026' },
-    { id: 'p3-t3', title: 'Run Integration Tests',        status: 'Doing',     priority: 'URGENT', assigneeName: 'QA Team', dueDate: '11 Sep 2026' },
-    { id: 'p3-t4', title: 'Fix Failed Transactions',      status: 'Doing',     priority: 'HIGH',   assigneeName: 'Dev Team', dueDate: '12 Sep 2026' },
-    { id: 'p3-t5', title: 'Document Test Results',        status: 'Completed', priority: 'LOW',    assigneeName: 'QA Team', dueDate: '06 Sep 2026' },
-    { id: 'p3-t6', title: 'Security Review',              status: 'On Hold',   priority: 'URGENT', assigneeName: 'Security', dueDate: '14 Sep 2026' },
-  ],
-};
-
-// Returns tasks for a given project id (localStorage-backed so CRUD works)
-export function apiFetchProjectTasks(projectId: string): Task[] {
-  if (typeof window === 'undefined') return PROJECT_TASKS[projectId] ?? [];
-  const key = `pyramid_project_tasks_${projectId}`;
-  const raw = localStorage.getItem(key);
-  if (!raw) {
-    const seed = PROJECT_TASKS[projectId] ?? [];
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
+export async function apiFetchProjects(): Promise<Project[]> {
+  const token = getStoredToken();
+  if (!token) return [];
+  try {
+    const res = await fetch(`${API_BASE_URL}/projects`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch projects');
+    return await res.json();
+  } catch {
+    return [];
   }
-  try { return JSON.parse(raw); } catch { return PROJECT_TASKS[projectId] ?? []; }
 }
 
-export function apiCreateProjectTask(projectId: string, dto: Partial<Task>): Task {
-  const tasks = apiFetchProjectTasks(projectId);
-  const newTask: Task = {
-    id: `${projectId}-t${Date.now()}`,
-    title: dto.title || 'New Task',
-    description: dto.description || '',
-    status: dto.status || 'To Do',
-    priority: dto.priority || 'MEDIUM',
-    assigneeName: dto.assigneeName || 'Admin',
-    dueDate: dto.dueDate || '—',
-    tags: dto.tags || '',
-    createdAt: new Date().toISOString(),
-  };
-  tasks.push(newTask);
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
+export async function apiGetProjectById(id: string): Promise<Project | null> {
+  const token = getStoredToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Not found');
+    return await res.json();
+  } catch {
+    return null;
   }
-  return newTask;
 }
 
-export function apiUpdateProjectTask(projectId: string, taskId: string, dto: Partial<Task>): Task {
-  const tasks = apiFetchProjectTasks(projectId);
-  const idx = tasks.findIndex(t => t.id === taskId);
-  if (idx !== -1) {
-    tasks[idx] = { ...tasks[idx], ...dto };
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
-    }
-    return tasks[idx];
-  }
-  return dto as Task;
+export async function apiCreateProject(dto: Partial<Project>): Promise<Project> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dto),
+  });
+  if (!res.ok) throw new Error('Failed to create project');
+  return await res.json();
 }
 
-export function apiDeleteProjectTask(projectId: string, taskId: string): void {
-  const tasks = apiFetchProjectTasks(projectId).filter(t => t.id !== taskId);
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`pyramid_project_tasks_${projectId}`, JSON.stringify(tasks));
+export async function apiUpdateProject(id: string, dto: Partial<Project>): Promise<Project> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dto),
+  });
+  if (!res.ok) throw new Error('Failed to update project');
+  return await res.json();
+}
+
+export async function apiDeleteProject(id: string): Promise<void> {
+  const token = getStoredToken();
+  await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function apiFetchProjectTasks(projectId: string): Promise<Task[]> {
+  const token = getStoredToken();
+  if (!token) return [];
+  try {
+    const res = await fetch(`${API_BASE_URL}/tasks?projectId=${projectId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch project tasks');
+    return await res.json();
+  } catch {
+    return [];
   }
+}
+
+export async function apiCreateProjectTask(projectId: string, dto: Partial<Task>): Promise<Task> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ...dto, projectId }),
+  });
+  if (!res.ok) throw new Error('Failed to create task');
+  return await res.json();
+}
+
+export async function apiUpdateProjectTask(projectId: string, taskId: string, dto: Partial<Task>): Promise<Task> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dto),
+  });
+  if (!res.ok) throw new Error('Failed to update task');
+  return await res.json();
+}
+
+export async function apiDeleteProjectTask(projectId: string, taskId: string): Promise<void> {
+  const token = getStoredToken();
+  await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 // Initial seed tasks matching Figma Screen 2

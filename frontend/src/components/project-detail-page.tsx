@@ -8,7 +8,7 @@ import {
   User,
   Task,
   Project,
-  getProjectById,
+  apiGetProjectById,
   apiFetchProjectTasks,
   apiCreateProjectTask,
   apiUpdateProjectTask,
@@ -149,9 +149,13 @@ export function ProjectDetailPage({ projectId, user, onLogout }: ProjectDetailPa
 
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    const p = getProjectById(projectId);
-    setProject(p);
-    setTasks(apiFetchProjectTasks(projectId));
+    const loadData = async () => {
+      const p = await apiGetProjectById(projectId);
+      setProject(p || undefined);
+      const t = await apiFetchProjectTasks(projectId);
+      setTasks(t);
+    };
+    loadData();
   }, [projectId]);
 
   // ── Close popovers on outside click ──────────────────────────────────────
@@ -193,27 +197,27 @@ export function ProjectDetailPage({ projectId, user, onLogout }: ProjectDetailPa
     setMenuTaskId(null); setMenuPos(null);
   };
 
-  const handleSubmitModal = (e: React.FormEvent) => {
+  const handleSubmitModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
     if (editingTask) {
-      const updated = apiUpdateProjectTask(projectId, editingTask.id, formData);
+      const updated = await apiUpdateProjectTask(projectId, editingTask.id, formData);
       setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updated } : t));
     } else {
-      const created = apiCreateProjectTask(projectId, formData);
+      const created = await apiCreateProjectTask(projectId, formData);
       setTasks(prev => [...prev, created]);
     }
     setIsModalOpen(false);
   };
 
-  const handleMoveTask = (task: Task, targetStatus: string) => {
-    const updated = apiUpdateProjectTask(projectId, task.id, { status: targetStatus });
+  const handleMoveTask = async (task: Task, targetStatus: string) => {
+    await apiUpdateProjectTask(projectId, task.id, { status: targetStatus });
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: targetStatus } : t));
     setMenuTaskId(null); setMenuPos(null);
   };
 
-  const handleDeleteTask = (id: string) => {
-    apiDeleteProjectTask(projectId, id);
+  const handleDeleteTask = async (id: string) => {
+    await apiDeleteProjectTask(projectId, id);
     setTasks(prev => prev.filter(t => t.id !== id));
     setMenuTaskId(null); setMenuPos(null);
   };
